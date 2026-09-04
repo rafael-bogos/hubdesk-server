@@ -1,6 +1,6 @@
-# chamados-server
+# Hubdesk Server
 
-API da plataforma open source de chamados (helpdesk). Express 5 + TypeScript + Prisma.
+API da Hubdesk, plataforma open source de chamados (helpdesk). Express 5 + TypeScript + Prisma.
 
 ## Rodando localmente
 

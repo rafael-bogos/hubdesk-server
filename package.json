@@ -1,8 +1,8 @@
 {
-  "name": "chamados-server",
+  "name": "hubdesk-server",
   "version": "0.1.0",
   "private": true,
-  "description": "API da plataforma open source de chamados (helpdesk)",
+  "description": "Hubdesk — API da plataforma open source de chamados (helpdesk)",
   "license": "MIT",
   "type": "commonjs",
   "main": "dist/main/server.js",

@@ -1,3 +1,5 @@
+name: hubdesk
+
 services:
   api:
     build:
@@ -8,11 +10,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://chamados:chamados@db:5432/chamados?schema=public
+      DATABASE_URL: postgresql://hubdesk:hubdesk@db:5432/hubdesk?schema=public
       JWT_SECRET: change-me-in-production
       UPLOADS_DIR: uploads
     volumes:
-      - chamados_uploads:/app/uploads
+      - hubdesk_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -25,19 +27,19 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: chamados
-      POSTGRES_PASSWORD: chamados
-      POSTGRES_DB: chamados
+      POSTGRES_USER: hubdesk
+      POSTGRES_PASSWORD: hubdesk
+      POSTGRES_DB: hubdesk
     ports:
       - '5432:5432'
     volumes:
-      - chamados_db_data:/var/lib/postgresql/data
+      - hubdesk_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U chamados']
+      test: ['CMD-SHELL', 'pg_isready -U hubdesk']
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  chamados_db_data:
-  chamados_uploads:
+  hubdesk_db_data:
+  hubdesk_uploads:
