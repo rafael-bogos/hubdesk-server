@@ -9,6 +9,7 @@ import {
   notFoundHandler,
 } from '../infrastructure/http/express/middleware/error-middleware';
 import { logger } from '../infrastructure/logging/logger';
+import { makeAdminModule } from './factories/make-admin-router';
 import { makeAuthModule } from './factories/make-auth-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 
@@ -27,6 +28,9 @@ export const createApp = () => {
 
   const { router: ticketRouter } = makeTicketModule(prisma, authenticate);
   app.use(ticketRouter);
+
+  const { router: adminRouter } = makeAdminModule(prisma, authenticate);
+  app.use(adminRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

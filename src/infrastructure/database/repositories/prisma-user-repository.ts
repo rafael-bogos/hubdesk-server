@@ -1,6 +1,6 @@
-import { PrismaClient, Role as PrismaRole, User as PrismaUser } from '@prisma/client';
+import { Prisma, PrismaClient, Role as PrismaRole, User as PrismaUser } from '@prisma/client';
 import { Role, User } from '../../../domain/entities/user.entity';
-import { CreateUserData, UserRepository } from '../../../domain/repositories/user-repository';
+import { CreateUserData, ListUsersFilters, ListUsersResult, UserRepository } from '../../../domain/repositories/user-repository';
 
 const toDomain = (user: PrismaUser): User => ({
   id: user.id,
@@ -63,5 +63,24 @@ export class PrismaUserRepository implements UserRepository {
     });
 
     return toDomain(user);
+  }
+
+  async list(filters: ListUsersFilters): Promise<ListUsersResult> {
+    const where: Prisma.UserWhereInput = {
+      ...(filters.role ? { role: filters.role as PrismaRole } : {}),
+      ...(filters.active !== undefined ? { active: filters.active } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (filters.page - 1) * filters.pageSize,
+        take: filters.pageSize,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { items: items.map(toDomain), total, page: filters.page, pageSize: filters.pageSize };
   }
 }
