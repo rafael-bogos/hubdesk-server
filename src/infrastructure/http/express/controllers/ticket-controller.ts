@@ -3,6 +3,7 @@ import { AddAttachmentUseCase } from '../../../../application/use-cases/tickets/
 import { AddCommentUseCase } from '../../../../application/use-cases/tickets/add-comment.use-case';
 import { AssignTicketUseCase } from '../../../../application/use-cases/tickets/assign-ticket.use-case';
 import { CreateTicketUseCase } from '../../../../application/use-cases/tickets/create-ticket.use-case';
+import { DownloadAttachmentUseCase } from '../../../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../../../application/use-cases/tickets/get-ticket.use-case';
 import { ListTicketsUseCase } from '../../../../application/use-cases/tickets/list-tickets.use-case';
 import { UpdateTicketStatusUseCase } from '../../../../application/use-cases/tickets/update-ticket-status.use-case';
@@ -19,6 +20,7 @@ export class TicketController {
     private readonly assignTicketUseCase: AssignTicketUseCase,
     private readonly addCommentUseCase: AddCommentUseCase,
     private readonly addAttachmentUseCase: AddAttachmentUseCase,
+    private readonly downloadAttachmentUseCase: DownloadAttachmentUseCase,
   ) {}
 
   private actor(req: Request): Actor {
@@ -105,6 +107,26 @@ export class TicketController {
       );
 
       res.status(201).json(attachment);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  downloadAttachment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const attachmentId = Array.isArray(req.params.attachmentId)
+        ? req.params.attachmentId[0]
+        : req.params.attachmentId;
+
+      const file = await this.downloadAttachmentUseCase.execute(
+        this.ticketId(req),
+        attachmentId,
+        this.actor(req),
+      );
+
+      res.setHeader('Content-Type', file.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+      res.status(200).send(file.buffer);
     } catch (err) {
       next(err);
     }

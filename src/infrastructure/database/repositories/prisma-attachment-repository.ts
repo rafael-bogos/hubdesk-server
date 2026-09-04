@@ -44,4 +44,9 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
 
     return attachments.map(toDomain);
   }
+
+  async findById(id: string): Promise<Attachment | null> {
+    const attachment = await this.prisma.attachment.findUnique({ where: { id } });
+    return attachment ? toDomain(attachment) : null;
+  }
 }

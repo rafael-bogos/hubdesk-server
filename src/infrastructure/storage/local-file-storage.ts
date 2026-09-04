@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { FileStorage, FileToSave, SavedFile } from '../../domain/ports/file-storage';
 
@@ -15,6 +15,10 @@ export class LocalFileStorage implements FileStorage {
     await writeFile(path, file.buffer);
 
     return { path: filename, filename: file.originalName };
+  }
+
+  async read(path: string): Promise<Buffer> {
+    return readFile(resolve(this.uploadsDir, path));
   }
 
   async delete(path: string): Promise<void> {

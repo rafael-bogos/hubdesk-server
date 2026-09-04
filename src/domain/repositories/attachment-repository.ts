@@ -13,4 +13,5 @@ export interface CreateAttachmentData {
 export interface AttachmentRepository {
   create(data: CreateAttachmentData): Promise<Attachment>;
   listByTicketId(ticketId: string): Promise<Attachment[]>;
+  findById(id: string): Promise<Attachment | null>;
 }

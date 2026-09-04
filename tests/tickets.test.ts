@@ -246,3 +246,53 @@ describe('POST /tickets/:id/attachments', () => {
     expect(ticketResponse.body.attachments).toHaveLength(1);
   });
 });
+
+describe('GET /tickets/:id/attachments/:attachmentId', () => {
+  it('dono do chamado consegue baixar o anexo com o conteúdo correto', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .attach('file', Buffer.from('conteudo de teste'), {
+        filename: 'evidencia.txt',
+        contentType: 'text/plain',
+      });
+
+    const attachmentId = uploadResponse.body.id;
+
+    const downloadResponse = await request(app)
+      .get(`/tickets/${ticketId}/attachments/${attachmentId}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(downloadResponse.status).toBe(200);
+    expect(downloadResponse.headers['content-type']).toContain('text/plain');
+    expect(downloadResponse.headers['content-disposition']).toContain('evidencia.txt');
+    expect(downloadResponse.text).toBe('conteudo de teste');
+  });
+
+  it('outro customer não consegue baixar anexo de chamado alheio', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const otherCustomer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .attach('file', Buffer.from('conteudo de teste'), {
+        filename: 'evidencia.txt',
+        contentType: 'text/plain',
+      });
+
+    const attachmentId = uploadResponse.body.id;
+
+    const response = await request(app)
+      .get(`/tickets/${ticketId}/attachments/${attachmentId}`)
+      .set('Authorization', `Bearer ${otherCustomer.accessToken}`);
+
+    expect(response.status).toBe(404);
+  });
+});

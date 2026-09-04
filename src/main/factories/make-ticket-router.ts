@@ -5,6 +5,7 @@ import { AddAttachmentUseCase } from '../../application/use-cases/tickets/add-at
 import { AddCommentUseCase } from '../../application/use-cases/tickets/add-comment.use-case';
 import { AssignTicketUseCase } from '../../application/use-cases/tickets/assign-ticket.use-case';
 import { CreateTicketUseCase } from '../../application/use-cases/tickets/create-ticket.use-case';
+import { DownloadAttachmentUseCase } from '../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../application/use-cases/tickets/get-ticket.use-case';
 import { ListTicketsUseCase } from '../../application/use-cases/tickets/list-tickets.use-case';
 import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/update-ticket-status.use-case';
@@ -29,6 +30,7 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository);
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository);
   const addAttachmentUseCase = new AddAttachmentUseCase(ticketRepository, attachmentRepository, fileStorage);
+  const downloadAttachmentUseCase = new DownloadAttachmentUseCase(ticketRepository, attachmentRepository, fileStorage);
 
   const ticketController = new TicketController(
     createTicketUseCase,
@@ -38,6 +40,7 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
     assignTicketUseCase,
     addCommentUseCase,
     addAttachmentUseCase,
+    downloadAttachmentUseCase,
   );
 
   return {

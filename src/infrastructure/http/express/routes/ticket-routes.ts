@@ -51,6 +51,7 @@ export const makeTicketRouter = (ticketController: TicketController, authenticat
   );
   router.post('/tickets/:id/comments', validate(addCommentSchema), ticketController.addComment);
   router.post('/tickets/:id/attachments', upload.single('file'), ticketController.addAttachment);
+  router.get('/tickets/:id/attachments/:attachmentId', ticketController.downloadAttachment);
 
   return router;
 };

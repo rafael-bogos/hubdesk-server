@@ -6,3 +6,10 @@ export class TicketNotFoundError extends AppError {
     this.name = 'TicketNotFoundError';
   }
 }
+
+export class AttachmentNotFoundError extends AppError {
+  constructor() {
+    super('Anexo não encontrado', 404);
+    this.name = 'AttachmentNotFoundError';
+  }
+}
