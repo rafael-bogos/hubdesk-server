@@ -10,6 +10,9 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://chamados:chamados@db:5432/chamados?schema=public
       JWT_SECRET: change-me-in-production
+      UPLOADS_DIR: uploads
+    volumes:
+      - chamados_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -37,3 +40,4 @@ services:
 
 volumes:
   chamados_db_data:
+  chamados_uploads:

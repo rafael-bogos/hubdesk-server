@@ -20,6 +20,7 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 COPY --from=builder /app/dist ./dist
 
 RUN addgroup -S app && adduser -S app -G app
+RUN mkdir -p /app/uploads && chown -R app:app /app/uploads
 USER app
 
 EXPOSE 3001

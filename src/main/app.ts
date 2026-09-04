@@ -10,6 +10,7 @@ import {
 } from '../infrastructure/http/express/middleware/error-middleware';
 import { logger } from '../infrastructure/logging/logger';
 import { makeAuthModule } from './factories/make-auth-router';
+import { makeTicketModule } from './factories/make-ticket-router';
 
 export const createApp = () => {
   const app = express();
@@ -21,8 +22,11 @@ export const createApp = () => {
 
   app.use(healthRouter);
 
-  const { router: authRouter } = makeAuthModule(prisma);
+  const { router: authRouter, authenticate } = makeAuthModule(prisma);
   app.use(authRouter);
+
+  const { router: ticketRouter } = makeTicketModule(prisma, authenticate);
+  app.use(ticketRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
