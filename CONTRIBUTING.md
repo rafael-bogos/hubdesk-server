@@ -35,14 +35,16 @@ manual em `main/factories/` é intencional. Regra de negócio vai em
 
 ```bash
 npm run lint
-npm test        # requer Postgres rodando (docker compose up -d db)
+npm test        # requer .env.test configurado (veja README) e Postgres rodando
 npm run build
 ```
 
 Todos os três precisam passar. Testes de integração (Vitest + Supertest) rodam
-contra um Postgres real — não existe suíte só de unit tests hoje, então rode com
-o banco de dev no ar. Novas rotas/use cases precisam vir com teste cobrindo pelo
-menos o caminho feliz e a regra de autorização por role relevante.
+contra um Postgres real — não existe suíte só de unit tests hoje — mas contra
+o banco `hubdesk_test`, nunca o `hubdesk` de dev (os `beforeEach` de cada
+suíte apagam as tabelas). Novas rotas/use cases precisam vir com teste
+cobrindo pelo menos o caminho feliz e a regra de autorização por role
+relevante.
 
 ## Commits
 

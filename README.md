@@ -44,12 +44,35 @@ npm run dev                     # http://localhost:3001
 
 Verifique com `curl http://localhost:3001/health`.
 
+## Testes
+
+Os testes de integração rodam contra um Postgres real, mas **num banco
+separado do de desenvolvimento** (`hubdesk_test`, não `hubdesk`) — os
+`beforeEach` de cada suíte apagam todas as linhas das tabelas, então
+rodar contra o banco de dev apagaria seus dados (usuários, chamados etc.)
+a cada `npm test`.
+
+```bash
+cp .env.test.example .env.test
+```
+
+O `docker-compose.dev.yml` já cria o banco `hubdesk_test` automaticamente
+num volume novo (via `docker/init-databases.sql`). Se você já tinha o
+volume de antes desta mudança, crie o banco manualmente uma vez:
+
+```bash
+docker compose -f docker-compose.dev.yml exec db psql -U hubdesk -d hubdesk -c "CREATE DATABASE hubdesk_test;"
+DATABASE_URL="postgresql://hubdesk:hubdesk@localhost:5432/hubdesk_test?schema=public" npx prisma migrate deploy
+```
+
+Depois disso, `npm test` já usa `.env.test` automaticamente.
+
 ## Scripts
 
 - `npm run dev` — modo desenvolvimento com reload automático
 - `npm run build` — compila para `dist/`
 - `npm start` — roda o build compilado
-- `npm test` — roda os testes (Vitest + Supertest, requer Postgres)
+- `npm test` — roda os testes (Vitest + Supertest, contra `hubdesk_test`, veja acima)
 - `npm run lint` — roda o ESLint
 - `npm run prisma:migrate` — cria/aplica migrações em dev
 - `npm run db:seed` — cria o primeiro usuário ADMIN (idempotente)
