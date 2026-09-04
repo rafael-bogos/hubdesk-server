@@ -1,17 +1,13 @@
 import { RequestHandler, Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/auth-controller';
 import { validate } from '../middleware/validate';
 import { loginSchema, refreshSchema, registerSchema } from '../schemas/auth.schemas';
 
-const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-export const makeAuthRouter = (authController: AuthController, authenticate: RequestHandler) => {
+export const makeAuthRouter = (
+  authController: AuthController,
+  authenticate: RequestHandler,
+  authRateLimiter: RequestHandler,
+) => {
   const router = Router();
 
   router.post('/auth/register', authRateLimiter, validate(registerSchema), authController.register);

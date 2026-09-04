@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import rateLimit from 'express-rate-limit';
 import { LoginUserUseCase } from '../../application/use-cases/auth/login-user.use-case';
 import { LogoutUserUseCase } from '../../application/use-cases/auth/logout-user.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/auth/refresh-token.use-case';
@@ -35,8 +36,16 @@ export const makeAuthModule = (prisma: PrismaClient) => {
 
   const authenticate = makeAuthenticate(userRepository, tokenService);
 
+  const authRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => env.nodeEnv === 'test',
+  });
+
   return {
-    router: makeAuthRouter(authController, authenticate),
+    router: makeAuthRouter(authController, authenticate, authRateLimiter),
     authenticate,
   };
 };
