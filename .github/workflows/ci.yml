@@ -9,6 +9,27 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hubdesk
+          POSTGRES_PASSWORD: hubdesk
+          POSTGRES_DB: hubdesk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hubdesk"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://hubdesk:hubdesk@localhost:5432/hubdesk?schema=public
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,5 +41,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run prisma:generate
+      - run: npx prisma migrate deploy
       - run: npm test
       - run: npm run build
