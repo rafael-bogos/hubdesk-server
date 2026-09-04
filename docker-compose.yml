@@ -13,6 +13,11 @@ services:
       DATABASE_URL: postgresql://hubdesk:hubdesk@db:5432/hubdesk?schema=public
       JWT_SECRET: change-me-in-production
       UPLOADS_DIR: uploads
+      # Opcionais — defina num arquivo `.env` ao lado deste compose para customizar
+      # o admin criado pelo seed na primeira subida (veja .env.example).
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
     volumes:
       - hubdesk_uploads:/app/uploads
     depends_on:
@@ -39,6 +44,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  client:
+    build:
+      context: ../hubdesk-client
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      # Hostname interno da rede docker do serviço `api` acima — não `localhost`.
+      BACKEND_API_URL: http://api:3001
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   hubdesk_db_data:
