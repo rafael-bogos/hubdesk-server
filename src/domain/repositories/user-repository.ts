@@ -7,10 +7,25 @@ export interface CreateUserData {
   role?: User['role'];
 }
 
+export interface ListUsersFilters {
+  role?: User['role'];
+  active?: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export interface ListUsersResult {
+  items: User[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   create(data: CreateUserData): Promise<User>;
   update(id: string, data: Partial<Omit<User, 'id'>>): Promise<User>;
   incrementTokenVersion(id: string): Promise<User>;
+  list(filters: ListUsersFilters): Promise<ListUsersResult>;
 }
