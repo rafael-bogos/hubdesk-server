@@ -81,7 +81,12 @@ describe('GET /tickets', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.items).toHaveLength(1);
-    expect(response.body.items[0]).toMatchObject({ title: 'Chamado A', requesterId: customerA.userId });
+    expect(response.body.items[0]).toMatchObject({
+      title: 'Chamado A',
+      requesterId: customerA.userId,
+      requester: { id: customerA.userId },
+      assignee: null,
+    });
   });
 
   it('agent vê todos os chamados', async () => {
@@ -127,7 +132,10 @@ describe('GET /tickets/:id', () => {
       .set('Authorization', `Bearer ${agent.accessToken}`);
 
     expect(response.status).toBe(200);
-    expect(response.body.ticket).toMatchObject({ id: ticketId });
+    expect(response.body.ticket).toMatchObject({
+      id: ticketId,
+      requester: { id: customer.userId },
+    });
   });
 });
 

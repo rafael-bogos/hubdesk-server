@@ -8,7 +8,7 @@ export interface CreateUserData {
 }
 
 export interface ListUsersFilters {
-  role?: User['role'];
+  role?: User['role'] | User['role'][];
   active?: boolean;
   page: number;
   pageSize: number;

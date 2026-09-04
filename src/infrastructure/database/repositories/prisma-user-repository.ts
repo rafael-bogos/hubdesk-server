@@ -67,7 +67,9 @@ export class PrismaUserRepository implements UserRepository {
 
   async list(filters: ListUsersFilters): Promise<ListUsersResult> {
     const where: Prisma.UserWhereInput = {
-      ...(filters.role ? { role: filters.role as PrismaRole } : {}),
+      ...(filters.role
+        ? { role: Array.isArray(filters.role) ? { in: filters.role as PrismaRole[] } : (filters.role as PrismaRole) }
+        : {}),
       ...(filters.active !== undefined ? { active: filters.active } : {}),
     };
 
