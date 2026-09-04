@@ -2,9 +2,12 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
-import { errorHandler, notFoundHandler } from './middleware/error-middleware';
-import { healthRouter } from './routes/health-routes';
-import { logger } from './utils/logger';
+import { healthRouter } from '../infrastructure/http/express/routes/health-routes';
+import {
+  errorHandler,
+  notFoundHandler,
+} from '../infrastructure/http/express/middleware/error-middleware';
+import { logger } from '../infrastructure/logging/logger';
 
 export const createApp = () => {
   const app = express();

@@ -28,16 +28,34 @@ docker compose up --build
 - `npm run lint` — roda o ESLint
 - `npm run prisma:migrate` — aplica migrações do Prisma
 
-## Estrutura
+## Estrutura (Clean Architecture)
 
 ```
 src/
-  controllers/   # lida com request/response, delega para services
-  services/      # regras de negócio
-  repositories/  # acesso a dados via Prisma
-  routes/        # definição das rotas Express
-  middleware/    # auth, roles, validação, tratamento de erro
-  types/         # tipos compartilhados
-  dtos/          # schemas Zod de entrada/saída
-  utils/         # utilitários (logger, etc.)
+  domain/               # entidades e interfaces de repositório (ports) — sem deps de framework
+    entities/
+    repositories/
+    errors/
+  application/          # regras de negócio da aplicação — depende só de domain/
+    use-cases/
+    dtos/
+  infrastructure/       # implementações concretas — depende de domain/ (implementa os ports)
+    database/prisma/      # schema.prisma + client singleton
+    database/repositories/ # implementações Prisma dos repositórios de domain/
+    auth/                  # JWT + bcrypt
+    http/express/
+      controllers/           # finos, chamam use cases
+      routes/
+      middleware/             # authenticate, requireRole, validate, error-handler
+    logging/               # pino
+    storage/               # anexos
+  main/                  # composition root — único lugar que conhece tudo
+    config/                # variáveis de ambiente
+    factories/             # wiring manual de repositórios/use cases/controllers
+    app.ts / server.ts
 ```
+
+Regra de dependência: `domain/` não importa nada de fora; `application/` só importa
+de `domain/`; `infrastructure/` implementa os ports de `domain/`; `main/` é o único
+lugar que conhece `infrastructure/`, `application/` e `domain/` ao mesmo tempo. Sem
+lib de DI (inversify/tsyringe) — wiring manual em `main/factories/`.

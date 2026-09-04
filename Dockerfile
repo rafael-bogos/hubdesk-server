@@ -3,7 +3,6 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-COPY prisma ./prisma
 RUN npm ci
 COPY . .
 RUN npm run prisma:generate && npm run build
@@ -14,9 +13,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-COPY prisma ./prisma
-RUN npm ci --omit=dev && npm run prisma:generate
+RUN npm ci --omit=dev
 
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/dist ./dist
 
 RUN addgroup -S app && adduser -S app -G app
@@ -28,4 +28,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/main/server.js"]

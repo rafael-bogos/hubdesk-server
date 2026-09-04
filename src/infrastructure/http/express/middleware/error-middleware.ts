@@ -1,14 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import { logger } from '../utils/logger';
-
-export class HttpError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import { AppError } from '../../../../domain/errors/app-error';
+import { logger } from '../../../logging/logger';
 
 export const notFoundHandler = (req: Request, res: Response) => {
   res.status(404).json({ error: `Rota não encontrada: ${req.method} ${req.originalUrl}` });
@@ -20,7 +12,7 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction,
 ) => {
-  const statusCode = err instanceof HttpError ? err.statusCode : 500;
+  const statusCode = err instanceof AppError ? err.statusCode : 500;
   const message = err instanceof Error ? err.message : 'Erro interno do servidor';
 
   if (statusCode >= 500) {
