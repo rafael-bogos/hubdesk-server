@@ -28,6 +28,7 @@ model User {
   ticketsAssigned  Ticket[]     @relation("TicketAssignee")
   comments         Comment[]
   attachments      Attachment[]
+  auditLogs        AuditLog[]
 
   @@map("users")
 }
@@ -120,4 +121,18 @@ model Attachment {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("attachments")
+}
+
+model AuditLog {
+  id       String @id @default(cuid())
+  actorId  String @map("actor_id")
+  actor    User   @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  action   String
+  entity   String
+  entityId String @map("entity_id")
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
 }
