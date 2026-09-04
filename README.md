@@ -5,31 +5,31 @@ gerenciamento de usuários/roles (`ADMIN`/`AGENT`/`CUSTOMER`) e área de adminis
 Express 5 + TypeScript + Prisma, em Clean Architecture.
 
 O frontend fica em [hubdesk-client](../hubdesk-client) — repositório irmão,
-publicado separadamente, esperado clonado ao lado deste (`../hubdesk-client`
-a partir daqui) para o `docker compose` abaixo funcionar.
+publicado separadamente, com seu próprio `docker-compose.yml`.
 
-## Rodando tudo com um comando (Docker Compose)
+## Rodando a API com Docker Compose
 
 ```bash
 git clone <url-deste-repo> hubdesk-server
-git clone <url-do-hubdesk-client> hubdesk-client   # lado a lado
 cd hubdesk-server
 docker compose up --build
 ```
 
-Isso sobe Postgres + API + client. Na primeira subida, a API aplica as
-migrations e roda o seed automaticamente, criando o primeiro usuário `ADMIN`
-**se ainda não existir nenhum**. Acompanhe os logs do serviço `api` — a senha
-gerada é impressa **uma única vez**:
+Isso sobe Postgres + API. Na primeira subida, a API aplica as migrations e
+roda o seed automaticamente, criando o primeiro usuário `ADMIN` **se ainda
+não existir nenhum**. Acompanhe os logs do serviço `api` — a senha gerada é
+impressa **uma única vez**:
 
 ```bash
 docker compose logs api | grep -A3 "\[seed\]"
 ```
 
-Depois é só abrir `http://localhost:3000` e logar com esse e-mail/senha. Para
-definir suas próprias credenciais em vez de uma senha aleatória, crie um
+Para definir suas próprias credenciais em vez de uma senha aleatória, crie um
 `.env` ao lado do `docker-compose.yml` com `SEED_ADMIN_EMAIL` e
 `SEED_ADMIN_PASSWORD` antes do primeiro `up` (veja `.env.example`).
+
+Suba o `hubdesk-client` separadamente (via o `docker-compose.yml` dele, ou
+`npm run dev`) apontando `BACKEND_API_URL` para esta API.
 
 ## Rodando em dev (sem Docker)
 

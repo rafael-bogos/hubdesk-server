@@ -45,19 +45,6 @@ services:
       timeout: 5s
       retries: 5
 
-  client:
-    build:
-      context: ../hubdesk-client
-    ports:
-      - '3000:3000'
-    environment:
-      NODE_ENV: production
-      # Hostname interno da rede docker do serviço `api` acima — não `localhost`.
-      BACKEND_API_URL: http://api:3001
-    depends_on:
-      api:
-        condition: service_healthy
-
 volumes:
   hubdesk_db_data:
   hubdesk_uploads:
