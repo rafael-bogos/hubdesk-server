@@ -24,5 +24,100 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  ticketsRequested Ticket[]     @relation("TicketRequester")
+  ticketsAssigned  Ticket[]     @relation("TicketAssignee")
+  comments         Comment[]
+  attachments      Attachment[]
+
   @@map("users")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tickets Ticket[]
+
+  @@map("categories")
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+
+  requesterId String @map("requester_id")
+  requester   User   @relation("TicketRequester", fields: [requesterId], references: [id])
+
+  assigneeId String? @map("assignee_id")
+  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  categoryId String?   @map("category_id")
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  closedAt  DateTime? @map("closed_at")
+
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@map("tickets")
+}
+
+model Comment {
+  id         String  @id @default(cuid())
+  ticketId   String  @map("ticket_id")
+  ticket     Ticket  @relation(fields: [ticketId], references: [id])
+  authorId   String  @map("author_id")
+  author     User    @relation(fields: [authorId], references: [id])
+  body       String
+  isInternal Boolean @default(false) @map("is_internal")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("comments")
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  ticketId String @map("ticket_id")
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  commentId String?  @map("comment_id")
+  comment   Comment? @relation(fields: [commentId], references: [id])
+
+  filename String
+  path     String
+  mimeType String @map("mime_type")
+  size     Int
+
+  uploadedById String @map("uploaded_by_id")
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("attachments")
 }
