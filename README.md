@@ -35,7 +35,7 @@ definir suas próprias credenciais em vez de uma senha aleatória, crie um
 
 ```bash
 cp .env.example .env
-docker compose up -d db        # só o Postgres
+docker compose -f docker-compose.dev.yml up -d
 npm install
 npx prisma migrate deploy
 npm run db:seed                 # cria o primeiro ADMIN (mesmo comportamento acima)
