@@ -1,3 +1,4 @@
+import { CategoryRepository } from '../../../domain/repositories/category-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { UserRepository } from '../../../domain/repositories/user-repository';
 import { Actor, ListTicketsInput } from '../../dtos/ticket.dto';
@@ -18,6 +19,7 @@ export class ListTicketsUseCase {
   constructor(
     private readonly ticketRepository: TicketRepository,
     private readonly userRepository: UserRepository,
+    private readonly categoryRepository: CategoryRepository,
   ) {}
 
   async execute(input: ListTicketsInput, actor: Actor): Promise<ListTicketsOutput> {
@@ -34,7 +36,7 @@ export class ListTicketsUseCase {
       pageSize,
     });
 
-    const items = await enrichTickets(result.items, this.userRepository);
+    const items = await enrichTickets(result.items, this.userRepository, this.categoryRepository);
 
     return { ...result, items };
   }

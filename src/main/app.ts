@@ -11,6 +11,7 @@ import {
 import { logger } from '../infrastructure/logging/logger';
 import { makeAdminModule } from './factories/make-admin-router';
 import { makeAuthModule } from './factories/make-auth-router';
+import { makeCategoryModule } from './factories/make-category-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 import { makeUserModule } from './factories/make-user-router';
 
@@ -32,6 +33,9 @@ export const createApp = () => {
 
   const { router: userRouter } = makeUserModule(prisma, authenticate);
   app.use(userRouter);
+
+  const { router: categoryRouter } = makeCategoryModule(prisma, authenticate);
+  app.use(categoryRouter);
 
   const { router: adminRouter } = makeAdminModule(prisma, authenticate);
   app.use(adminRouter);

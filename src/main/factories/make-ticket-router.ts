@@ -10,6 +10,7 @@ import { GetTicketUseCase } from '../../application/use-cases/tickets/get-ticket
 import { ListTicketsUseCase } from '../../application/use-cases/tickets/list-tickets.use-case';
 import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/update-ticket-status.use-case';
 import { PrismaAttachmentRepository } from '../../infrastructure/database/repositories/prisma-attachment-repository';
+import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaCommentRepository } from '../../infrastructure/database/repositories/prisma-comment-repository';
 import { PrismaTicketRepository } from '../../infrastructure/database/repositories/prisma-ticket-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
@@ -23,6 +24,7 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
   const commentRepository = new PrismaCommentRepository(prisma);
   const attachmentRepository = new PrismaAttachmentRepository(prisma);
   const userRepository = new PrismaUserRepository(prisma);
+  const categoryRepository = new PrismaCategoryRepository(prisma);
   const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
 
   const createTicketUseCase = new CreateTicketUseCase(ticketRepository);
@@ -31,8 +33,9 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
     commentRepository,
     attachmentRepository,
     userRepository,
+    categoryRepository,
   );
-  const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository);
+  const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
   const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository);
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository);
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository);

@@ -2,6 +2,7 @@ import { Attachment } from '../../../domain/entities/attachment.entity';
 import { Comment } from '../../../domain/entities/comment.entity';
 import { TicketNotFoundError } from '../../../domain/errors/ticket-errors';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
+import { CategoryRepository } from '../../../domain/repositories/category-repository';
 import { CommentRepository } from '../../../domain/repositories/comment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { UserRepository } from '../../../domain/repositories/user-repository';
@@ -21,6 +22,7 @@ export class GetTicketUseCase {
     private readonly commentRepository: CommentRepository,
     private readonly attachmentRepository: AttachmentRepository,
     private readonly userRepository: UserRepository,
+    private readonly categoryRepository: CategoryRepository,
   ) {}
 
   async execute(ticketId: string, actor: Actor): Promise<GetTicketOutput> {
@@ -35,7 +37,7 @@ export class GetTicketUseCase {
     const [comments, attachments, enrichedTicket] = await Promise.all([
       this.commentRepository.listByTicketId(ticketId),
       this.attachmentRepository.listByTicketId(ticketId),
-      enrichTicket(ticket, this.userRepository),
+      enrichTicket(ticket, this.userRepository, this.categoryRepository),
     ]);
 
     const visibleComments =
