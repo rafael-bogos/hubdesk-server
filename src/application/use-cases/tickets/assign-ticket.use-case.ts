@@ -3,6 +3,7 @@ import { ForbiddenError } from '../../../domain/errors/auth-errors';
 import { TicketNotFoundError } from '../../../domain/errors/ticket-errors';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor, AssignTicketInput } from '../../dtos/ticket.dto';
+import { assertCanViewTicket } from './ticket-access';
 
 export class AssignTicketUseCase {
   constructor(private readonly ticketRepository: TicketRepository) {}
@@ -17,6 +18,8 @@ export class AssignTicketUseCase {
     if (!ticket) {
       throw new TicketNotFoundError();
     }
+
+    assertCanViewTicket(actor, ticket);
 
     return this.ticketRepository.setAssignees(ticketId, input.assigneeIds);
   }

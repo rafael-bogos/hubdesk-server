@@ -31,7 +31,12 @@ export class ListTicketsUseCase {
       status: input.status,
       priority: input.priority,
       categoryId: input.categoryId,
+      // Só o ADMIN vê o filtro na UI, mas a restrição de visibilidade de
+      // agente acima já impede um AGENT de usar isto pra espiar a fila de
+      // outro atendente (a interseção das duas dá lista vazia).
+      assigneeId: input.assigneeId,
       requesterId: actor.role === 'CUSTOMER' ? actor.userId : undefined,
+      visibleToAgentId: actor.role === 'AGENT' ? actor.userId : undefined,
       page,
       pageSize,
     });

@@ -17,6 +17,7 @@ export interface ListTicketsInput {
   status?: TicketStatus;
   priority?: TicketPriority;
   categoryId?: string;
+  assigneeId?: string;
   page?: number;
   pageSize?: number;
 }

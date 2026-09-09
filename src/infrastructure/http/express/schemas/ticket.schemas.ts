@@ -14,6 +14,7 @@ export const listTicketsQuerySchema = z.object({
   status: statusEnum.optional(),
   priority: priorityEnum.optional(),
   categoryId: z.string().optional(),
+  assigneeId: z.string().optional(),
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().optional(),
 });

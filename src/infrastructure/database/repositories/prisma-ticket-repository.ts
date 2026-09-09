@@ -55,6 +55,15 @@ export class PrismaTicketRepository implements TicketRepository {
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.priority ? { priority: filters.priority } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+      ...(filters.visibleToAgentId
+        ? {
+            OR: [
+              { assignees: { none: {} } },
+              { assignees: { some: { userId: filters.visibleToAgentId } } },
+            ],
+          }
+        : {}),
+      ...(filters.assigneeId ? { assignees: { some: { userId: filters.assigneeId } } } : {}),
     };
 
     const [items, total] = await Promise.all([

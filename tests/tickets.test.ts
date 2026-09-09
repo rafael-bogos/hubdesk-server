@@ -91,7 +91,7 @@ describe('GET /tickets', () => {
     });
   });
 
-  it('agent vê todos os chamados', async () => {
+  it('agent vê chamados sem responsável de qualquer customer', async () => {
     const customerA = await registerAndLogin('CUSTOMER');
     const customerB = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
@@ -104,6 +104,85 @@ describe('GET /tickets', () => {
     expect(response.status).toBe(200);
     expect(response.body.items).toHaveLength(2);
     expect(response.body.total).toBe(2);
+  });
+
+  it('agent não vê chamado atribuído a outro agent, mas vê o seu e os sem responsável', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const admin = await registerAndLogin('ADMIN');
+
+    await createTicket(customer.accessToken, { title: 'Sem responsável' });
+    const mineResponse = await createTicket(customer.accessToken, { title: 'Atribuído a mim' });
+    const othersResponse = await createTicket(customer.accessToken, { title: 'Atribuído a outro agent' });
+
+    await request(app)
+      .patch(`/tickets/${mineResponse.body.id}/assign`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ assigneeIds: [agentA.userId] });
+
+    await request(app)
+      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ assigneeIds: [agentB.userId] });
+
+    const listResponse = await request(app)
+      .get('/tickets')
+      .set('Authorization', `Bearer ${agentA.accessToken}`);
+
+    expect(listResponse.status).toBe(200);
+    const titles = listResponse.body.items.map((t: { title: string }) => t.title).sort();
+    expect(titles).toEqual(['Atribuído a mim', 'Sem responsável']);
+
+    const getOthersResponse = await request(app)
+      .get(`/tickets/${othersResponse.body.id}`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`);
+    expect(getOthersResponse.status).toBe(404);
+
+    const statusOnOthersResponse = await request(app)
+      .patch(`/tickets/${othersResponse.body.id}/status`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ status: 'IN_PROGRESS' });
+    expect(statusOnOthersResponse.status).toBe(404);
+
+    const assignOnOthersResponse = await request(app)
+      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ assigneeIds: [agentA.userId] });
+    expect(assignOnOthersResponse.status).toBe(404);
+
+    const adminListResponse = await request(app)
+      .get('/tickets')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(adminListResponse.body.total).toBe(3);
+  });
+
+  it('admin filtra chamados por responsável (assigneeId)', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const admin = await registerAndLogin('ADMIN');
+
+    const mineResponse = await createTicket(customer.accessToken, { title: 'Do agent A' });
+    const othersResponse = await createTicket(customer.accessToken, { title: 'Do agent B' });
+    await createTicket(customer.accessToken, { title: 'Sem responsável' });
+
+    await request(app)
+      .patch(`/tickets/${mineResponse.body.id}/assign`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ assigneeIds: [agentA.userId] });
+    await request(app)
+      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ assigneeIds: [agentB.userId] });
+
+    const response = await request(app)
+      .get(`/tickets?assigneeId=${agentA.userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Do agent A');
   });
 });
 

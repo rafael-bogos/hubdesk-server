@@ -17,6 +17,13 @@ export interface UpdateTicketData {
 
 export interface ListTicketsFilters {
   requesterId?: string;
+  // Restringe a chamados sem responsável ou atribuídos a este id — usado
+  // pra agentes não verem a fila de outros atendentes.
+  visibleToAgentId?: string;
+  // Filtro explícito por responsável (ex: admin filtrando a fila de um
+  // atendente específico) — diferente de visibleToAgentId, que também inclui
+  // chamados sem responsável.
+  assigneeId?: string;
   status?: TicketStatus;
   priority?: TicketPriority;
   categoryId?: string;
