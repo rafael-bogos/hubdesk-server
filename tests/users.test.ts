@@ -33,6 +33,7 @@ const cleanDb = async () => {
   await prisma.auditLog.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.comment.deleteMany();
+  await prisma.ticketAssignee.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.category.deleteMany();
   await prisma.user.deleteMany();

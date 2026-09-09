@@ -18,6 +18,6 @@ export class AssignTicketUseCase {
       throw new TicketNotFoundError();
     }
 
-    return this.ticketRepository.update(ticketId, { assigneeId: input.assigneeId });
+    return this.ticketRepository.setAssignees(ticketId, input.assigneeIds);
   }
 }

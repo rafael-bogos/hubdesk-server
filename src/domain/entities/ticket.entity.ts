@@ -8,7 +8,7 @@ export interface Ticket {
   status: TicketStatus;
   priority: TicketPriority;
   requesterId: string;
-  assigneeId: string | null;
+  assigneeIds: string[];
   categoryId: string | null;
   createdAt: Date;
   updatedAt: Date;

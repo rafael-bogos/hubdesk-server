@@ -15,7 +15,7 @@ export interface CategorySummary {
 
 export type EnrichedTicket = Ticket & {
   requester: UserSummary | null;
-  assignee: UserSummary | null;
+  assignees: UserSummary[];
   category: CategorySummary | null;
 };
 
@@ -34,7 +34,7 @@ export const enrichTickets = async (
   const categoryIds = new Set<string>();
   for (const ticket of tickets) {
     userIds.add(ticket.requesterId);
-    if (ticket.assigneeId) userIds.add(ticket.assigneeId);
+    for (const assigneeId of ticket.assigneeIds) userIds.add(assigneeId);
     if (ticket.categoryId) categoryIds.add(ticket.categoryId);
   }
 
@@ -51,7 +51,9 @@ export const enrichTickets = async (
   return tickets.map((ticket) => ({
     ...ticket,
     requester: toSummary(usersById.get(ticket.requesterId)),
-    assignee: ticket.assigneeId ? toSummary(usersById.get(ticket.assigneeId)) : null,
+    assignees: ticket.assigneeIds
+      .map((assigneeId) => toSummary(usersById.get(assigneeId)))
+      .filter((summary): summary is UserSummary => summary !== null),
     category: ticket.categoryId ? toCategorySummary(categoriesById.get(ticket.categoryId)) : null,
   }));
 };

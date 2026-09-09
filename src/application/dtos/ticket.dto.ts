@@ -26,7 +26,7 @@ export interface UpdateTicketStatusInput {
 }
 
 export interface AssignTicketInput {
-  assigneeId: string;
+  assigneeIds: string[];
 }
 
 export interface AddCommentInput {

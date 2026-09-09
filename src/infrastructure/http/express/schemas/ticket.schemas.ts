@@ -23,7 +23,7 @@ export const updateTicketStatusSchema = z.object({
 });
 
 export const assignTicketSchema = z.object({
-  assigneeId: z.string().min(1, 'assigneeId é obrigatório'),
+  assigneeIds: z.array(z.string().min(1)).max(50, 'No máximo 50 responsáveis por chamado'),
 });
 
 export const addCommentSchema = z.object({

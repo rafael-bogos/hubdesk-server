@@ -1,5 +1,6 @@
 import { RequestHandler, Router } from 'express';
 import multer from 'multer';
+import { AppError } from '../../../../domain/errors/app-error';
 import { TicketController } from '../controllers/ticket-controller';
 import { requireRole } from '../middleware/require-role';
 import { validate, validateQuery } from '../middleware/validate';
@@ -19,13 +20,20 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'text/plain',
   'application/zip',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
 ]);
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
-    callback(null, ALLOWED_MIME_TYPES.has(file.mimetype));
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      callback(new AppError('Tipo de arquivo não suportado', 400));
+      return;
+    }
+    callback(null, true);
   },
 });
 

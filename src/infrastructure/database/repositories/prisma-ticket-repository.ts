@@ -8,19 +8,23 @@ import {
   UpdateTicketData,
 } from '../../../domain/repositories/ticket-repository';
 
-const toDomain = (ticket: PrismaTicket): Ticket => ({
+type PrismaTicketWithAssignees = PrismaTicket & { assignees: { userId: string }[] };
+
+const toDomain = (ticket: PrismaTicketWithAssignees): Ticket => ({
   id: ticket.id,
   title: ticket.title,
   description: ticket.description,
   status: ticket.status as TicketStatus,
   priority: ticket.priority as TicketPriority,
   requesterId: ticket.requesterId,
-  assigneeId: ticket.assigneeId,
+  assigneeIds: ticket.assignees.map((assignee) => assignee.userId),
   categoryId: ticket.categoryId,
   createdAt: ticket.createdAt,
   updatedAt: ticket.updatedAt,
   closedAt: ticket.closedAt,
 });
+
+const includeAssignees = { assignees: { select: { userId: true } } } as const;
 
 export class PrismaTicketRepository implements TicketRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -34,13 +38,14 @@ export class PrismaTicketRepository implements TicketRepository {
         requesterId: data.requesterId,
         categoryId: data.categoryId ?? undefined,
       },
+      include: includeAssignees,
     });
 
     return toDomain(ticket);
   }
 
   async findById(id: string): Promise<Ticket | null> {
-    const ticket = await this.prisma.ticket.findUnique({ where: { id } });
+    const ticket = await this.prisma.ticket.findUnique({ where: { id }, include: includeAssignees });
     return ticket ? toDomain(ticket) : null;
   }
 
@@ -55,6 +60,7 @@ export class PrismaTicketRepository implements TicketRepository {
     const [items, total] = await Promise.all([
       this.prisma.ticket.findMany({
         where,
+        include: includeAssignees,
         orderBy: { createdAt: 'desc' },
         skip: (filters.page - 1) * filters.pageSize,
         take: filters.pageSize,
@@ -71,11 +77,29 @@ export class PrismaTicketRepository implements TicketRepository {
       data: {
         ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
-        ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.closedAt !== undefined ? { closedAt: data.closedAt } : {}),
       },
+      include: includeAssignees,
     });
+
+    return toDomain(ticket);
+  }
+
+  async setAssignees(id: string, userIds: string[]): Promise<Ticket> {
+    const uniqueUserIds = [...new Set(userIds)];
+
+    const [, , ticket] = await this.prisma.$transaction([
+      this.prisma.ticketAssignee.deleteMany({ where: { ticketId: id } }),
+      this.prisma.ticketAssignee.createMany({
+        data: uniqueUserIds.map((userId) => ({ ticketId: id, userId })),
+      }),
+      this.prisma.ticket.update({
+        where: { id },
+        data: {},
+        include: includeAssignees,
+      }),
+    ]);
 
     return toDomain(ticket);
   }

@@ -38,6 +38,7 @@ const createTicket = async (accessToken: string, overrides: Partial<{ title: str
 beforeEach(async () => {
   await prisma.attachment.deleteMany();
   await prisma.comment.deleteMany();
+  await prisma.ticketAssignee.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.user.deleteMany();
 });
@@ -45,6 +46,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await prisma.attachment.deleteMany();
   await prisma.comment.deleteMany();
+  await prisma.ticketAssignee.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.user.deleteMany();
   await prisma.$disconnect();
@@ -62,7 +64,7 @@ describe('POST /tickets', () => {
       status: 'OPEN',
       priority: 'MEDIUM',
       requesterId: customer.userId,
-      assigneeId: null,
+      assigneeIds: [],
     });
   });
 });
@@ -85,7 +87,7 @@ describe('GET /tickets', () => {
       title: 'Chamado A',
       requesterId: customerA.userId,
       requester: { id: customerA.userId },
-      assignee: null,
+      assignees: [],
     });
   });
 
@@ -150,10 +152,10 @@ describe('PATCH /tickets/:id/assign e /status', () => {
     const assignResponse = await request(app)
       .patch(`/tickets/${ticketId}/assign`)
       .set('Authorization', `Bearer ${agent.accessToken}`)
-      .send({ assigneeId: agent.userId });
+      .send({ assigneeIds: [agent.userId] });
 
     expect(assignResponse.status).toBe(200);
-    expect(assignResponse.body.assigneeId).toBe(agent.userId);
+    expect(assignResponse.body.assigneeIds).toEqual([agent.userId]);
 
     const statusResponse = await request(app)
       .patch(`/tickets/${ticketId}/status`)
@@ -162,6 +164,38 @@ describe('PATCH /tickets/:id/assign e /status', () => {
 
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe('IN_PROGRESS');
+  });
+
+  it('agent atribui múltiplos responsáveis ao mesmo chamado', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const assignResponse = await request(app)
+      .patch(`/tickets/${ticketId}/assign`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ assigneeIds: [agentA.userId, agentB.userId] });
+
+    expect(assignResponse.status).toBe(200);
+    expect(assignResponse.body.assigneeIds).toEqual(
+      expect.arrayContaining([agentA.userId, agentB.userId]),
+    );
+    expect(assignResponse.body.assigneeIds).toHaveLength(2);
+
+    const getResponse = await request(app)
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`);
+
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body.ticket.assignees).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: agentA.userId }),
+        expect.objectContaining({ id: agentB.userId }),
+      ]),
+    );
   });
 
   it('customer não consegue mudar o status', async () => {

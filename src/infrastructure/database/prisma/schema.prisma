@@ -24,11 +24,11 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  ticketsRequested Ticket[]     @relation("TicketRequester")
-  ticketsAssigned  Ticket[]     @relation("TicketAssignee")
-  comments         Comment[]
-  attachments      Attachment[]
-  auditLogs        AuditLog[]
+  ticketsRequested   Ticket[]         @relation("TicketRequester")
+  ticketAssignments  TicketAssignee[]
+  comments           Comment[]
+  attachments        Attachment[]
+  auditLogs          AuditLog[]
 
   @@map("users")
 }
@@ -70,8 +70,7 @@ model Ticket {
   requesterId String @map("requester_id")
   requester   User   @relation("TicketRequester", fields: [requesterId], references: [id])
 
-  assigneeId String? @map("assignee_id")
-  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  assignees TicketAssignee[]
 
   categoryId String?   @map("category_id")
   category   Category? @relation(fields: [categoryId], references: [id])
@@ -84,6 +83,19 @@ model Ticket {
   attachments Attachment[]
 
   @@map("tickets")
+}
+
+model TicketAssignee {
+  id       String @id @default(cuid())
+  ticketId String @map("ticket_id")
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+  userId   String @map("user_id")
+  user     User   @relation(fields: [userId], references: [id])
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@unique([ticketId, userId])
+  @@map("ticket_assignees")
 }
 
 model Comment {

@@ -11,7 +11,6 @@ export interface CreateTicketData {
 export interface UpdateTicketData {
   status?: TicketStatus;
   priority?: TicketPriority;
-  assigneeId?: string | null;
   categoryId?: string | null;
   closedAt?: Date | null;
 }
@@ -37,4 +36,5 @@ export interface TicketRepository {
   findById(id: string): Promise<Ticket | null>;
   list(filters: ListTicketsFilters): Promise<ListTicketsResult>;
   update(id: string, data: UpdateTicketData): Promise<Ticket>;
+  setAssignees(id: string, userIds: string[]): Promise<Ticket>;
 }

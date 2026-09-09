@@ -17,9 +17,9 @@ export class PrismaDashboardStatsRepository implements DashboardStatsRepository 
     const [byStatus, byPriority, openByAssignee, byRole] = await Promise.all([
       this.prisma.ticket.groupBy({ by: ['status'], _count: { _all: true } }),
       this.prisma.ticket.groupBy({ by: ['priority'], _count: { _all: true } }),
-      this.prisma.ticket.groupBy({
-        by: ['assigneeId'],
-        where: { assigneeId: { not: null }, status: { in: OPEN_STATUSES } },
+      this.prisma.ticketAssignee.groupBy({
+        by: ['userId'],
+        where: { ticket: { status: { in: OPEN_STATUSES } } },
         _count: { _all: true },
       }),
       this.prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
@@ -40,19 +40,17 @@ export class PrismaDashboardStatsRepository implements DashboardStatsRepository 
       usersByRole[row.role] = row._count._all;
     });
 
-    const agentIds = openByAssignee.map((row) => row.assigneeId).filter((id): id is string => id !== null);
+    const agentIds = openByAssignee.map((row) => row.userId);
     const agents = agentIds.length
       ? await this.prisma.user.findMany({ where: { id: { in: agentIds } }, select: { id: true, name: true } })
       : [];
     const agentNameById = new Map(agents.map((agent) => [agent.id, agent.name]));
 
-    const openTicketsByAgent: AgentTicketCount[] = openByAssignee
-      .filter((row): row is typeof row & { assigneeId: string } => row.assigneeId !== null)
-      .map((row) => ({
-        agentId: row.assigneeId,
-        agentName: agentNameById.get(row.assigneeId) ?? 'Desconhecido',
-        count: row._count._all,
-      }));
+    const openTicketsByAgent: AgentTicketCount[] = openByAssignee.map((row) => ({
+      agentId: row.userId,
+      agentName: agentNameById.get(row.userId) ?? 'Desconhecido',
+      count: row._count._all,
+    }));
 
     return { ticketsByStatus, ticketsByPriority, openTicketsByAgent, usersByRole };
   }
