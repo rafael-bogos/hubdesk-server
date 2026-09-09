@@ -25,6 +25,7 @@ export const makeAdminRouter = (
   router.get('/admin/users', validateQuery(listUsersQuerySchema), adminUserController.list);
   router.post('/admin/users', validate(createUserSchema), adminUserController.create);
   router.patch('/admin/users/:id', validate(updateUserSchema), adminUserController.update);
+  router.delete('/admin/users/:id', adminUserController.remove);
 
   router.get('/admin/categories', adminCategoryController.list);
   router.post('/admin/categories', validate(createCategorySchema), adminCategoryController.create);

@@ -142,3 +142,59 @@ describe('POST /auth/logout', () => {
     expect(meResponse.status).toBe(401);
   });
 });
+
+describe('POST /auth/change-password', () => {
+  it('troca a senha, devolve tokens novos e invalida o token antigo', async () => {
+    const registerResponse = await registerUser();
+    const { accessToken: oldAccessToken } = registerResponse.body;
+
+    const changeResponse = await request(app)
+      .post('/auth/change-password')
+      .set('Authorization', `Bearer ${oldAccessToken}`)
+      .send({ currentPassword: 'password123', newPassword: 'new-password456' });
+
+    expect(changeResponse.status).toBe(200);
+    expect(changeResponse.body.accessToken).toBeTypeOf('string');
+    expect(changeResponse.body.refreshToken).toBeTypeOf('string');
+
+    const oldTokenMeResponse = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${oldAccessToken}`);
+    expect(oldTokenMeResponse.status).toBe(401);
+
+    const newTokenMeResponse = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${changeResponse.body.accessToken}`);
+    expect(newTokenMeResponse.status).toBe(200);
+
+    const oldPasswordLogin = await request(app)
+      .post('/auth/login')
+      .send({ email: 'rafael@example.com', password: 'password123' });
+    expect(oldPasswordLogin.status).toBe(401);
+
+    const newPasswordLogin = await request(app)
+      .post('/auth/login')
+      .send({ email: 'rafael@example.com', password: 'new-password456' });
+    expect(newPasswordLogin.status).toBe(200);
+  });
+
+  it('rejeita quando a senha atual está errada', async () => {
+    const registerResponse = await registerUser();
+    const { accessToken } = registerResponse.body;
+
+    const response = await request(app)
+      .post('/auth/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: 'senha-errada', newPassword: 'new-password456' });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejeita sem token', async () => {
+    const response = await request(app)
+      .post('/auth/change-password')
+      .send({ currentPassword: 'password123', newPassword: 'new-password456' });
+
+    expect(response.status).toBe(401);
+  });
+});

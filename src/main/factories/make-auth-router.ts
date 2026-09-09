@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import rateLimit from 'express-rate-limit';
+import { ChangePasswordUseCase } from '../../application/use-cases/auth/change-password.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/auth/login-user.use-case';
 import { LogoutUserUseCase } from '../../application/use-cases/auth/logout-user.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/auth/refresh-token.use-case';
@@ -25,12 +26,14 @@ export const makeAuthModule = (prisma: PrismaClient) => {
   const loginUserUseCase = new LoginUserUseCase(userRepository, passwordHasher, tokenService);
   const refreshTokenUseCase = new RefreshTokenUseCase(userRepository, tokenService);
   const logoutUserUseCase = new LogoutUserUseCase(userRepository);
+  const changePasswordUseCase = new ChangePasswordUseCase(userRepository, passwordHasher, tokenService);
 
   const authController = new AuthController(
     registerUserUseCase,
     loginUserUseCase,
     refreshTokenUseCase,
     logoutUserUseCase,
+    changePasswordUseCase,
     userRepository,
   );
 

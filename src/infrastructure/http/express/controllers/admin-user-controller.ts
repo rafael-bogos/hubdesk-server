@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { CreateUserUseCase } from '../../../../application/use-cases/admin/users/create-user.use-case';
+import { DeleteUserUseCase } from '../../../../application/use-cases/admin/users/delete-user.use-case';
 import { ListUsersUseCase } from '../../../../application/use-cases/admin/users/list-users.use-case';
 import { UpdateUserUseCase } from '../../../../application/use-cases/admin/users/update-user.use-case';
 import { User } from '../../../../domain/entities/user.entity';
@@ -20,6 +21,7 @@ export class AdminUserController {
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
 
   private actorId(req: Request): string {
@@ -51,6 +53,16 @@ export class AdminUserController {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const user = await this.updateUserUseCase.execute(id, req.body, this.actorId(req));
+      res.status(200).json(toSafeOutput(user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  remove = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const user = await this.deleteUserUseCase.execute(id, this.actorId(req));
       res.status(200).json(toSafeOutput(user));
     } catch (err) {
       next(err);

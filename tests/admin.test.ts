@@ -133,6 +133,111 @@ describe('POST /admin/users e PATCH /admin/users/:id', () => {
   });
 });
 
+describe('DELETE /admin/users/:id', () => {
+  it('admin exclui (desativa) um agente e invalida o token antigo dele', async () => {
+    const admin = await registerAndLogin('ADMIN');
+    const agent = await registerAndLogin('AGENT');
+
+    const deleteResponse = await request(app)
+      .delete(`/admin/users/${agent.userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body.active).toBe(false);
+
+    const meResponse = await request(app).get('/auth/me').set('Authorization', `Bearer ${agent.accessToken}`);
+    expect(meResponse.status).toBe(401);
+
+    const auditEntries = await prisma.auditLog.findMany({ where: { action: 'DELETE_USER' } });
+    expect(auditEntries).toHaveLength(1);
+  });
+
+  it('admin não consegue excluir a própria conta', async () => {
+    const admin = await registerAndLogin('ADMIN');
+
+    const response = await request(app)
+      .delete(`/admin/users/${admin.userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('admin não consegue excluir outro admin', async () => {
+    const admin = await registerAndLogin('ADMIN');
+    const otherAdmin = await registerAndLogin('ADMIN');
+
+    const response = await request(app)
+      .delete(`/admin/users/${otherAdmin.userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('agent e customer recebem 403', async () => {
+    const agent = await registerAndLogin('AGENT');
+    const customer = await registerAndLogin('CUSTOMER');
+    const target = await registerAndLogin('CUSTOMER');
+
+    const agentResponse = await request(app)
+      .delete(`/admin/users/${target.userId}`)
+      .set('Authorization', `Bearer ${agent.accessToken}`);
+    expect(agentResponse.status).toBe(403);
+
+    const customerResponse = await request(app)
+      .delete(`/admin/users/${target.userId}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+    expect(customerResponse.status).toBe(403);
+  });
+
+  it('sem token recebe 401', async () => {
+    const target = await registerAndLogin('CUSTOMER');
+    const response = await request(app).delete(`/admin/users/${target.userId}`);
+    expect(response.status).toBe(401);
+  });
+
+  it('id inexistente recebe 404', async () => {
+    const admin = await registerAndLogin('ADMIN');
+
+    const response = await request(app)
+      .delete('/admin/users/id-que-nao-existe')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('GET /admin/users?active=', () => {
+  it('filtra corretamente por active=true e active=false', async () => {
+    const admin = await registerAndLogin('ADMIN');
+    const activeUser = await registerAndLogin('CUSTOMER');
+    const inactiveUser = await registerAndLogin('CUSTOMER');
+
+    await request(app)
+      .delete(`/admin/users/${inactiveUser.userId}`)
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    const activeResponse = await request(app)
+      .get('/admin/users?active=true')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(activeResponse.status).toBe(200);
+    expect(activeResponse.body.items.map((u: { id: string }) => u.id)).toContain(activeUser.userId);
+    expect(activeResponse.body.items.map((u: { id: string }) => u.id)).not.toContain(
+      inactiveUser.userId,
+    );
+
+    const inactiveResponse = await request(app)
+      .get('/admin/users?active=false')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(inactiveResponse.status).toBe(200);
+    expect(inactiveResponse.body.items.map((u: { id: string }) => u.id)).toContain(
+      inactiveUser.userId,
+    );
+    expect(inactiveResponse.body.items.map((u: { id: string }) => u.id)).not.toContain(
+      activeUser.userId,
+    );
+  });
+});
+
 describe('categorias', () => {
   it('admin cria e atualiza uma categoria', async () => {
     const admin = await registerAndLogin('ADMIN');

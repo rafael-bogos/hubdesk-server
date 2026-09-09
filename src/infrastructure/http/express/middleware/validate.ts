@@ -26,7 +26,17 @@ export const validateQuery = (schema: ZodSchema) => {
       return next(new AppError(`Parâmetros inválidos: ${formatIssues(result.error)}`, 400));
     }
 
-    Object.assign(req.query, result.data);
+    // No Express 5, `query` é um getter-only herdado do protótipo — nem
+    // `Object.assign(req.query, ...)` gruda (a mutação some na próxima
+    // leitura, que reparseia a URL) nem `req.query = ...` funciona (lança
+    // "Cannot set property query ... which has only a getter"). Precisa
+    // redefinir a propriedade direto na instância pra sobrepor o getter.
+    Object.defineProperty(req, 'query', {
+      value: result.data,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
     next();
   };
 };

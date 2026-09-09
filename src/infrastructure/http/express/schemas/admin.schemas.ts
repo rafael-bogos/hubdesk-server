@@ -4,7 +4,12 @@ const roleEnum = z.enum(['ADMIN', 'AGENT', 'CUSTOMER']);
 
 export const listUsersQuerySchema = z.object({
   role: roleEnum.optional(),
-  active: z.coerce.boolean().optional(),
+  // z.coerce.boolean() faria Boolean("false") === true (qualquer string não
+  // vazia é truthy) — precisa comparar o texto, não só coagir o tipo.
+  active: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === 'true')),
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().optional(),
 });

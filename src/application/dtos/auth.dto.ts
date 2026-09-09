@@ -19,6 +19,11 @@ export interface LogoutInput {
   userId: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface AuthenticatedUserOutput {
   id: string;
   name: string;

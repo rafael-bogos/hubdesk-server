@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { ChangePasswordUseCase } from '../../../../application/use-cases/auth/change-password.use-case';
 import { LoginUserUseCase } from '../../../../application/use-cases/auth/login-user.use-case';
 import { LogoutUserUseCase } from '../../../../application/use-cases/auth/logout-user.use-case';
 import { RefreshTokenUseCase } from '../../../../application/use-cases/auth/refresh-token.use-case';
@@ -12,6 +13,7 @@ export class AuthController {
     private readonly loginUserUseCase: LoginUserUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly logoutUserUseCase: LogoutUserUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly userRepository: UserRepository,
   ) {}
 
@@ -49,6 +51,18 @@ export class AuthController {
       }
       await this.logoutUserUseCase.execute({ userId: req.user.userId });
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  changePassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError();
+      }
+      const result = await this.changePasswordUseCase.execute(req.user.userId, req.body);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

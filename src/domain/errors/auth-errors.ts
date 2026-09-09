@@ -34,3 +34,17 @@ export class ForbiddenError extends AppError {
     this.name = 'ForbiddenError';
   }
 }
+
+export class CannotDeleteSelfError extends AppError {
+  constructor() {
+    super('Você não pode excluir sua própria conta', 400);
+    this.name = 'CannotDeleteSelfError';
+  }
+}
+
+export class CannotDeleteAdminError extends AppError {
+  constructor() {
+    super('Não é possível excluir uma conta de administrador', 400);
+    this.name = 'CannotDeleteAdminError';
+  }
+}

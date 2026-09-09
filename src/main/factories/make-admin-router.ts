@@ -5,6 +5,7 @@ import { ListCategoriesUseCase } from '../../application/use-cases/admin/categor
 import { UpdateCategoryUseCase } from '../../application/use-cases/admin/categories/update-category.use-case';
 import { GetDashboardStatsUseCase } from '../../application/use-cases/admin/get-dashboard-stats.use-case';
 import { CreateUserUseCase } from '../../application/use-cases/admin/users/create-user.use-case';
+import { DeleteUserUseCase } from '../../application/use-cases/admin/users/delete-user.use-case';
 import { ListUsersUseCase } from '../../application/use-cases/admin/users/list-users.use-case';
 import { UpdateUserUseCase } from '../../application/use-cases/admin/users/update-user.use-case';
 import { BcryptPasswordHasher } from '../../infrastructure/auth/bcrypt-password-hasher';
@@ -27,6 +28,7 @@ export const makeAdminModule = (prisma: PrismaClient, authenticate: RequestHandl
   const listUsersUseCase = new ListUsersUseCase(userRepository);
   const createUserUseCase = new CreateUserUseCase(userRepository, passwordHasher, auditLogger);
   const updateUserUseCase = new UpdateUserUseCase(userRepository, auditLogger);
+  const deleteUserUseCase = new DeleteUserUseCase(userRepository, auditLogger);
 
   const listCategoriesUseCase = new ListCategoriesUseCase(categoryRepository);
   const createCategoryUseCase = new CreateCategoryUseCase(categoryRepository, auditLogger);
@@ -34,7 +36,12 @@ export const makeAdminModule = (prisma: PrismaClient, authenticate: RequestHandl
 
   const getDashboardStatsUseCase = new GetDashboardStatsUseCase(dashboardStatsRepository);
 
-  const adminUserController = new AdminUserController(listUsersUseCase, createUserUseCase, updateUserUseCase);
+  const adminUserController = new AdminUserController(
+    listUsersUseCase,
+    createUserUseCase,
+    updateUserUseCase,
+    deleteUserUseCase,
+  );
   const adminCategoryController = new AdminCategoryController(
     listCategoriesUseCase,
     createCategoryUseCase,
