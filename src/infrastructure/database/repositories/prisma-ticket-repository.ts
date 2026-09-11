@@ -12,6 +12,7 @@ type PrismaTicketWithAssignees = PrismaTicket & { assignees: { userId: string }[
 
 const toDomain = (ticket: PrismaTicketWithAssignees): Ticket => ({
   id: ticket.id,
+  number: ticket.number,
   title: ticket.title,
   description: ticket.description,
   status: ticket.status as TicketStatus,
