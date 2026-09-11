@@ -9,11 +9,12 @@ import {
   notFoundHandler,
 } from '../infrastructure/http/express/middleware/error-middleware';
 import { logger } from '../infrastructure/logging/logger';
-import { SocketIoTicketNotifier } from '../infrastructure/realtime/socket-io-ticket-notifier';
+import { SocketIoRealtimeNotifier } from '../infrastructure/realtime/socket-io-realtime-notifier';
 import { AppSocketServer } from '../infrastructure/realtime/socket-server';
 import { makeAdminModule } from './factories/make-admin-router';
 import { makeAuthModule } from './factories/make-auth-router';
 import { makeCategoryModule } from './factories/make-category-router';
+import { makeNotificationModule } from './factories/make-notification-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 import { makeUserModule } from './factories/make-user-router';
 
@@ -30,9 +31,12 @@ export const createApp = (options: { io?: AppSocketServer } = {}) => {
   const { router: authRouter, authenticate } = makeAuthModule(prisma);
   app.use(authRouter);
 
-  const ticketNotifier = options.io ? new SocketIoTicketNotifier(options.io) : undefined;
-  const { router: ticketRouter } = makeTicketModule(prisma, authenticate, ticketNotifier);
+  const realtimeNotifier = options.io ? new SocketIoRealtimeNotifier(options.io) : undefined;
+  const { router: ticketRouter } = makeTicketModule(prisma, authenticate, realtimeNotifier);
   app.use(ticketRouter);
+
+  const { router: notificationRouter } = makeNotificationModule(prisma, authenticate);
+  app.use(notificationRouter);
 
   const { router: userRouter } = makeUserModule(prisma, authenticate);
   app.use(userRouter);

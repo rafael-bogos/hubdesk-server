@@ -1,12 +1,12 @@
 import { Server } from 'socket.io';
 import { Role } from '../../domain/entities/user.entity';
+import { Notification } from '../../domain/entities/notification.entity';
 import { TokenService } from '../../domain/ports/token-service';
-import { TicketCreatedEvent } from '../../domain/ports/ticket-notifier';
 import { UserRepository } from '../../domain/repositories/user-repository';
 import { env } from '../../main/config/env';
 
 interface ServerToClientEvents {
-  'ticket:created': (event: TicketCreatedEvent) => void;
+  'notification:new': (notification: Notification) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- nenhum evento cliente->servidor por enquanto
@@ -21,9 +21,11 @@ interface SocketData {
 
 export type AppSocketServer = Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-// Sala com todo agent/admin conectado — é pra onde vão as notificações de
-// chamado novo (só eles podem ver chamados sem responsável).
-export const AGENTS_ROOM = 'agents';
+// Quem deve ver o quê já foi decidido antes de chegar aqui (ver
+// ticket-notification-service.ts, que resolve os destinatários e persiste
+// uma notificação por pessoa) — aqui só precisa de uma sala por usuário pra
+// entregar em tempo real pra quem estiver conectado.
+export const userRoom = (userId: string) => `user:${userId}`;
 
 // Recebe o `io` sem servidor HTTP anexado ainda de propósito — `io.attach()`
 // só funciona corretamente (multiplexando com o Express na mesma porta) se o
@@ -62,9 +64,7 @@ export const createSocketServer = (deps: {
   });
 
   io.on('connection', (socket) => {
-    if (socket.data.user.role === 'AGENT' || socket.data.user.role === 'ADMIN') {
-      socket.join(AGENTS_ROOM);
-    }
+    socket.join(userRoom(socket.data.user.userId));
   });
 
   return io;

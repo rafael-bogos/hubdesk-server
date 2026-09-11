@@ -11,31 +11,40 @@ import { ListTicketsUseCase } from '../../application/use-cases/tickets/list-tic
 import { UpdateAttachmentInternalUseCase } from '../../application/use-cases/tickets/update-attachment-internal.use-case';
 import { UpdateCommentInternalUseCase } from '../../application/use-cases/tickets/update-comment-internal.use-case';
 import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/update-ticket-status.use-case';
+import { TicketNotificationService } from '../../application/services/ticket-notification-service';
+import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
 import { PrismaAttachmentRepository } from '../../infrastructure/database/repositories/prisma-attachment-repository';
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaCommentRepository } from '../../infrastructure/database/repositories/prisma-comment-repository';
+import { PrismaNotificationRepository } from '../../infrastructure/database/repositories/prisma-notification-repository';
 import { PrismaTicketRepository } from '../../infrastructure/database/repositories/prisma-ticket-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
 import { TicketController } from '../../infrastructure/http/express/controllers/ticket-controller';
 import { makeTicketRouter } from '../../infrastructure/http/express/routes/ticket-routes';
-import { NullTicketNotifier } from '../../infrastructure/realtime/null-ticket-notifier';
+import { NullRealtimeNotifier } from '../../infrastructure/realtime/null-realtime-notifier';
 import { LocalFileStorage } from '../../infrastructure/storage/local-file-storage';
-import { TicketNotifier } from '../../domain/ports/ticket-notifier';
 import { env } from '../config/env';
 
 export const makeTicketModule = (
   prisma: PrismaClient,
   authenticate: RequestHandler,
-  ticketNotifier: TicketNotifier = new NullTicketNotifier(),
+  realtimeNotifier: RealtimeNotifier = new NullRealtimeNotifier(),
 ) => {
   const ticketRepository = new PrismaTicketRepository(prisma);
   const commentRepository = new PrismaCommentRepository(prisma);
   const attachmentRepository = new PrismaAttachmentRepository(prisma);
   const userRepository = new PrismaUserRepository(prisma);
   const categoryRepository = new PrismaCategoryRepository(prisma);
+  const notificationRepository = new PrismaNotificationRepository(prisma);
   const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
 
-  const createTicketUseCase = new CreateTicketUseCase(ticketRepository, ticketNotifier);
+  const ticketNotificationService = new TicketNotificationService(
+    userRepository,
+    notificationRepository,
+    realtimeNotifier,
+  );
+
+  const createTicketUseCase = new CreateTicketUseCase(ticketRepository, ticketNotificationService);
   const getTicketUseCase = new GetTicketUseCase(
     ticketRepository,
     commentRepository,
@@ -44,8 +53,8 @@ export const makeTicketModule = (
     categoryRepository,
   );
   const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
-  const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository);
-  const assignTicketUseCase = new AssignTicketUseCase(ticketRepository);
+  const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository, ticketNotificationService);
+  const assignTicketUseCase = new AssignTicketUseCase(ticketRepository, ticketNotificationService);
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository);
   const updateCommentInternalUseCase = new UpdateCommentInternalUseCase(ticketRepository, commentRepository);
   const addAttachmentUseCase = new AddAttachmentUseCase(

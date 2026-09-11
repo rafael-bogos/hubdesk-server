@@ -29,6 +29,7 @@ model User {
   comments           Comment[]
   attachments        Attachment[]
   auditLogs          AuditLog[]
+  notifications      Notification[]
 
   @@map("users")
 }
@@ -80,8 +81,9 @@ model Ticket {
   updatedAt DateTime  @updatedAt @map("updated_at")
   closedAt  DateTime? @map("closed_at")
 
-  comments    Comment[]
-  attachments Attachment[]
+  comments      Comment[]
+  attachments   Attachment[]
+  notifications Notification[]
 
   @@map("tickets")
 }
@@ -136,6 +138,31 @@ model Attachment {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("attachments")
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // String em vez de enum: mais barato adicionar tipos novos sem migration.
+  type  String
+  title String
+  body  String
+
+  ticketId     String @map("ticket_id")
+  ticket       Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  // Denormalizado de propósito — a notificação não deve mudar de conteúdo se
+  // o chamado for atualizado de novo depois, e evita um join só pra listar.
+  ticketNumber Int    @map("ticket_number")
+
+  read Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 model AuditLog {
