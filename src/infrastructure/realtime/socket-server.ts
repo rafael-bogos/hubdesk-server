@@ -7,6 +7,7 @@ import { env } from '../../main/config/env';
 
 interface ServerToClientEvents {
   'notification:new': (notification: Notification) => void;
+  'ticket:message': (payload: { ticketNumber: number }) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- nenhum evento cliente->servidor por enquanto

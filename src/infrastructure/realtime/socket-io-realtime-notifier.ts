@@ -8,4 +8,8 @@ export class SocketIoRealtimeNotifier implements RealtimeNotifier {
   pushNotification(notification: Notification): void {
     this.io.to(userRoom(notification.userId)).emit('notification:new', notification);
   }
+
+  pushTicketMessage(userId: string, ticketNumber: number): void {
+    this.io.to(userRoom(userId)).emit('ticket:message', { ticketNumber });
+  }
 }

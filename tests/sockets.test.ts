@@ -345,3 +345,152 @@ describe('Socket.io — notificação de chamado atualizado', () => {
     socket.disconnect();
   });
 });
+
+describe('Socket.io — mensagem nova no chamado', () => {
+  it('agent conectado recebe "ticket:message" quando o customer comenta', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    const socket = await connect(agent.accessToken);
+    const eventPromise = new Promise<Record<string, unknown>>((resolve) => {
+      socket.once('ticket:message', resolve);
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/comments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ body: 'Alguma novidade?' });
+
+    const event = await eventPromise;
+    expect(event).toMatchObject({ ticketNumber });
+
+    socket.disconnect();
+  });
+
+  it('o solicitante recebe "ticket:message" quando o agent responde', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    const socket = await connect(customer.accessToken);
+    const eventPromise = new Promise<Record<string, unknown>>((resolve) => {
+      socket.once('ticket:message', resolve);
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/comments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ body: 'Já estamos verificando' });
+
+    const event = await eventPromise;
+    expect(event).toMatchObject({ ticketNumber });
+
+    socket.disconnect();
+  });
+
+  it('quem envia a mensagem não recebe o próprio "ticket:message"', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    const socket = await connect(customer.accessToken);
+    let received = false;
+    socket.once('ticket:message', () => {
+      received = true;
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/comments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ body: 'Mensagem própria' });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(received).toBe(false);
+
+    socket.disconnect();
+  });
+
+  it('o solicitante não recebe "ticket:message" de uma nota interna', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    const socket = await connect(customer.accessToken);
+    let received = false;
+    socket.once('ticket:message', () => {
+      received = true;
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/comments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ body: 'Nota interna: verificar garantia', isInternal: true });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(received).toBe(false);
+
+    socket.disconnect();
+  });
+
+  it('agent recebe "ticket:message" quando é enviado um anexo', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    const socket = await connect(agent.accessToken);
+    const eventPromise = new Promise<Record<string, unknown>>((resolve) => {
+      socket.once('ticket:message', resolve);
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/attachments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .attach('file', Buffer.from('conteudo'), { filename: 'evidencia.txt', contentType: 'text/plain' });
+
+    const event = await eventPromise;
+    expect(event).toMatchObject({ ticketNumber });
+
+    socket.disconnect();
+  });
+
+  it('agent sem acesso ao chamado (atribuído a outro) não recebe "ticket:message"', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const admin = await registerAndLogin('ADMIN');
+
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    await request(app)
+      .patch(`/tickets/${ticketNumber}/assign`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ assigneeIds: [agentA.userId] });
+
+    const socket = await connect(agentB.accessToken);
+    let received = false;
+    socket.once('ticket:message', () => {
+      received = true;
+    });
+
+    await request(app)
+      .post(`/tickets/${ticketNumber}/comments`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ body: 'Mensagem só pra quem acompanha esse chamado' });
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(received).toBe(false);
+
+    socket.disconnect();
+  });
+});

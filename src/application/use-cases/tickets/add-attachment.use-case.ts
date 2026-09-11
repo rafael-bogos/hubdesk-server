@@ -3,6 +3,7 @@ import { FileStorage } from '../../../domain/ports/file-storage';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
 import { CommentRepository } from '../../../domain/repositories/comment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
+import { TicketNotificationService } from '../../services/ticket-notification-service';
 import { Actor, AddAttachmentInput } from '../../dtos/ticket.dto';
 import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
@@ -12,6 +13,7 @@ export class AddAttachmentUseCase {
     private readonly attachmentRepository: AttachmentRepository,
     private readonly fileStorage: FileStorage,
     private readonly commentRepository: CommentRepository,
+    private readonly ticketNotificationService: TicketNotificationService,
   ) {}
 
   async execute(ticketIdParam: string, input: AddAttachmentInput, actor: Actor): Promise<Attachment> {
@@ -27,7 +29,7 @@ export class AddAttachmentUseCase {
       buffer: input.buffer,
     });
 
-    return this.attachmentRepository.create({
+    const attachment = await this.attachmentRepository.create({
       ticketId: ticket.id,
       commentId: input.commentId,
       filename: saved.filename,
@@ -37,6 +39,10 @@ export class AddAttachmentUseCase {
       uploadedById: actor.userId,
       isInternal,
     });
+
+    await this.ticketNotificationService.notifyTicketMessage(ticket, actor.userId, isInternal);
+
+    return attachment;
   }
 
   // Customer nunca pode enviar anexo interno. Agent/admin: respeita o valor

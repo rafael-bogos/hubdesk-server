@@ -60,6 +60,21 @@ export class TicketNotificationService {
     });
   }
 
+  // Mensagem nova (comentário/anexo) não vira notificação persistida — seria
+  // barulho demais no sino a cada mensagem do chat. É só um empurrão em tempo
+  // real pra quem já pode ver o chamado, pra atualizar a conversa se estiver
+  // aberta na tela. Nota interna nunca vai pro solicitante (ele não pode nem
+  // ver a mensagem).
+  async notifyTicketMessage(ticket: Ticket, authorId: string, isInternal: boolean): Promise<void> {
+    const recipientIds = await this.updateRecipientIds(ticket, 'status');
+    recipientIds.delete(authorId);
+    if (isInternal) {
+      recipientIds.delete(ticket.requesterId);
+    }
+
+    recipientIds.forEach((userId) => this.realtimeNotifier.pushTicketMessage(userId, ticket.number));
+  }
+
   private async dispatch(userIds: string[], data: Omit<CreateNotificationData, 'userId'>): Promise<void> {
     await Promise.all(
       userIds.map(async (userId) => {

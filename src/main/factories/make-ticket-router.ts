@@ -55,13 +55,14 @@ export const makeTicketModule = (
   const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
   const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository, ticketNotificationService);
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository, ticketNotificationService);
-  const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository);
+  const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository, ticketNotificationService);
   const updateCommentInternalUseCase = new UpdateCommentInternalUseCase(ticketRepository, commentRepository);
   const addAttachmentUseCase = new AddAttachmentUseCase(
     ticketRepository,
     attachmentRepository,
     fileStorage,
     commentRepository,
+    ticketNotificationService,
   );
   const updateAttachmentInternalUseCase = new UpdateAttachmentInternalUseCase(ticketRepository, attachmentRepository);
   const downloadAttachmentUseCase = new DownloadAttachmentUseCase(ticketRepository, attachmentRepository, fileStorage);

@@ -7,4 +7,8 @@ export class NullRealtimeNotifier implements RealtimeNotifier {
   pushNotification(): void {
     // no-op
   }
+
+  pushTicketMessage(): void {
+    // no-op
+  }
 }
