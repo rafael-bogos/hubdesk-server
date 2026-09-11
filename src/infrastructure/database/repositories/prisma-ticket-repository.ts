@@ -56,20 +56,38 @@ export class PrismaTicketRepository implements TicketRepository {
   }
 
   async list(filters: ListTicketsFilters): Promise<ListTicketsResult> {
+    // visibleToAgentId e search usam `OR` cada um — não dá pra colocar os dois
+    // soltos no mesmo objeto (a segunda chave `OR` sobrescreveria a primeira),
+    // então cada um vira uma condição própria dentro de um `AND`.
+    const andConditions: Prisma.TicketWhereInput[] = [];
+
+    if (filters.visibleToAgentId) {
+      andConditions.push({
+        OR: [
+          { assignees: { none: {} } },
+          { assignees: { some: { userId: filters.visibleToAgentId } } },
+        ],
+      });
+    }
+
+    if (filters.search) {
+      const searchConditions: Prisma.TicketWhereInput[] = [
+        { title: { contains: filters.search, mode: 'insensitive' } },
+      ];
+      const asNumber = Number(filters.search);
+      if (Number.isInteger(asNumber)) {
+        searchConditions.push({ number: asNumber });
+      }
+      andConditions.push({ OR: searchConditions });
+    }
+
     const where: Prisma.TicketWhereInput = {
       ...(filters.requesterId ? { requesterId: filters.requesterId } : {}),
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.priority ? { priority: filters.priority } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(filters.visibleToAgentId
-        ? {
-            OR: [
-              { assignees: { none: {} } },
-              { assignees: { some: { userId: filters.visibleToAgentId } } },
-            ],
-          }
-        : {}),
       ...(filters.assigneeId ? { assignees: { some: { userId: filters.assigneeId } } } : {}),
+      ...(andConditions.length > 0 ? { AND: andConditions } : {}),
     };
 
     const [items, total] = await Promise.all([

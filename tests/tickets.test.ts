@@ -184,6 +184,37 @@ describe('GET /tickets', () => {
     expect(response.body.total).toBe(1);
     expect(response.body.items[0].title).toBe('Do agent A');
   });
+
+  it('busca chamados por trecho do título (case-insensitive)', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+
+    await createTicket(customer.accessToken, { title: 'Impressora sem tinta' });
+    await createTicket(customer.accessToken, { title: 'Monitor não liga' });
+
+    const response = await request(app)
+      .get('/tickets?search=IMPRESSORA')
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Impressora sem tinta');
+  });
+
+  it('busca chamado pelo número exato', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+
+    await createTicket(customer.accessToken, { title: 'Primeiro chamado' });
+    const secondResponse = await createTicket(customer.accessToken, { title: 'Segundo chamado' });
+    const secondNumber = secondResponse.body.number;
+
+    const response = await request(app)
+      .get(`/tickets?search=${secondNumber}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Segundo chamado');
+  });
 });
 
 describe('GET /tickets/:id', () => {

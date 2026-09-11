@@ -27,6 +27,9 @@ export interface ListTicketsFilters {
   status?: TicketStatus;
   priority?: TicketPriority;
   categoryId?: string;
+  // Casa por número exato (se for um inteiro válido) ou por trecho do título
+  // (case-insensitive).
+  search?: string;
   page: number;
   pageSize: number;
 }
