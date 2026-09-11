@@ -117,12 +117,12 @@ describe('GET /tickets', () => {
     const othersResponse = await createTicket(customer.accessToken, { title: 'Atribuído a outro agent' });
 
     await request(app)
-      .patch(`/tickets/${mineResponse.body.id}/assign`)
+      .patch(`/tickets/${mineResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ assigneeIds: [agentA.userId] });
 
     await request(app)
-      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .patch(`/tickets/${othersResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ assigneeIds: [agentB.userId] });
 
@@ -135,18 +135,18 @@ describe('GET /tickets', () => {
     expect(titles).toEqual(['Atribuído a mim', 'Sem responsável']);
 
     const getOthersResponse = await request(app)
-      .get(`/tickets/${othersResponse.body.id}`)
+      .get(`/tickets/${othersResponse.body.number}`)
       .set('Authorization', `Bearer ${agentA.accessToken}`);
     expect(getOthersResponse.status).toBe(404);
 
     const statusOnOthersResponse = await request(app)
-      .patch(`/tickets/${othersResponse.body.id}/status`)
+      .patch(`/tickets/${othersResponse.body.number}/status`)
       .set('Authorization', `Bearer ${agentA.accessToken}`)
       .send({ status: 'IN_PROGRESS' });
     expect(statusOnOthersResponse.status).toBe(404);
 
     const assignOnOthersResponse = await request(app)
-      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .patch(`/tickets/${othersResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${agentA.accessToken}`)
       .send({ assigneeIds: [agentA.userId] });
     expect(assignOnOthersResponse.status).toBe(404);
@@ -168,11 +168,11 @@ describe('GET /tickets', () => {
     await createTicket(customer.accessToken, { title: 'Sem responsável' });
 
     await request(app)
-      .patch(`/tickets/${mineResponse.body.id}/assign`)
+      .patch(`/tickets/${mineResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ assigneeIds: [agentA.userId] });
     await request(app)
-      .patch(`/tickets/${othersResponse.body.id}/assign`)
+      .patch(`/tickets/${othersResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ assigneeIds: [agentB.userId] });
 
@@ -192,7 +192,7 @@ describe('GET /tickets/:id', () => {
     const customerB = await registerAndLogin('CUSTOMER');
 
     const createResponse = await createTicket(customerA.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .get(`/tickets/${ticketId}`)
@@ -206,7 +206,7 @@ describe('GET /tickets/:id', () => {
     const agent = await registerAndLogin('AGENT');
 
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .get(`/tickets/${ticketId}`)
@@ -214,7 +214,8 @@ describe('GET /tickets/:id', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.ticket).toMatchObject({
-      id: ticketId,
+      id: createResponse.body.id,
+      number: ticketId,
       requester: { id: customer.userId },
     });
   });
@@ -226,7 +227,7 @@ describe('PATCH /tickets/:id/assign e /status', () => {
     const agent = await registerAndLogin('AGENT');
 
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const assignResponse = await request(app)
       .patch(`/tickets/${ticketId}/assign`)
@@ -251,7 +252,7 @@ describe('PATCH /tickets/:id/assign e /status', () => {
     const agentB = await registerAndLogin('AGENT');
 
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const assignResponse = await request(app)
       .patch(`/tickets/${ticketId}/assign`)
@@ -281,7 +282,7 @@ describe('PATCH /tickets/:id/assign e /status', () => {
     const customer = await registerAndLogin('CUSTOMER');
 
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .patch(`/tickets/${ticketId}/status`)
@@ -298,7 +299,7 @@ describe('POST /tickets/:id/comments', () => {
     const agent = await registerAndLogin('AGENT');
 
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const internalCommentResponse = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -331,7 +332,7 @@ describe('POST /tickets/:id/comments', () => {
   it('customer não consegue criar comentário interno', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -348,7 +349,7 @@ describe('PATCH /tickets/:id/comments/:commentId/internal', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const commentResponse = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -378,7 +379,7 @@ describe('PATCH /tickets/:id/comments/:commentId/internal', () => {
     const agentA = await registerAndLogin('AGENT');
     const agentB = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const commentResponse = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -397,7 +398,7 @@ describe('PATCH /tickets/:id/comments/:commentId/internal', () => {
   it('customer não consegue marcar mensagem como interna', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const commentResponse = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -417,7 +418,7 @@ describe('PATCH /tickets/:id/comments/:commentId/internal', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .patch(`/tickets/${ticketId}/comments/inexistente/internal`)
@@ -432,7 +433,7 @@ describe('POST /tickets/:id/attachments', () => {
   it('faz upload de um anexo associado ao chamado correto', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -443,7 +444,11 @@ describe('POST /tickets/:id/attachments', () => {
       });
 
     expect(response.status).toBe(201);
-    expect(response.body).toMatchObject({ ticketId, filename: 'evidencia.txt', mimeType: 'text/plain' });
+    expect(response.body).toMatchObject({
+      ticketId: createResponse.body.id,
+      filename: 'evidencia.txt',
+      mimeType: 'text/plain',
+    });
 
     const ticketResponse = await request(app)
       .get(`/tickets/${ticketId}`)
@@ -456,7 +461,7 @@ describe('POST /tickets/:id/attachments', () => {
   it('customer não consegue enviar anexo interno', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -475,7 +480,7 @@ describe('POST /tickets/:id/attachments', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -506,7 +511,7 @@ describe('POST /tickets/:id/attachments', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const commentResponse = await request(app)
       .post(`/tickets/${ticketId}/comments`)
@@ -530,7 +535,7 @@ describe('PATCH /tickets/:id/attachments/:attachmentId/internal', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -560,7 +565,7 @@ describe('PATCH /tickets/:id/attachments/:attachmentId/internal', () => {
     const agentA = await registerAndLogin('AGENT');
     const agentB = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -579,7 +584,7 @@ describe('PATCH /tickets/:id/attachments/:attachmentId/internal', () => {
   it('customer não consegue marcar anexo como interno', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -599,7 +604,7 @@ describe('PATCH /tickets/:id/attachments/:attachmentId/internal', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const response = await request(app)
       .patch(`/tickets/${ticketId}/attachments/inexistente/internal`)
@@ -614,7 +619,7 @@ describe('GET /tickets/:id/attachments/:attachmentId', () => {
   it('dono do chamado consegue baixar o anexo com o conteúdo correto', async () => {
     const customer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -640,7 +645,7 @@ describe('GET /tickets/:id/attachments/:attachmentId', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const otherCustomer = await registerAndLogin('CUSTOMER');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)
@@ -663,7 +668,7 @@ describe('GET /tickets/:id/attachments/:attachmentId', () => {
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const createResponse = await createTicket(customer.accessToken);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const uploadResponse = await request(app)
       .post(`/tickets/${ticketId}/attachments`)

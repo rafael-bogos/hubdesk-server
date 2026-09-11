@@ -279,7 +279,7 @@ describe('GET /admin/dashboard', () => {
     await createTicket(customer.accessToken, 'Chamado B');
 
     await request(app)
-      .patch(`/tickets/${ticketAResponse.body.id}/assign`)
+      .patch(`/tickets/${ticketAResponse.body.number}/assign`)
       .set('Authorization', `Bearer ${agent.accessToken}`)
       .send({ assigneeIds: [agent.userId] });
 

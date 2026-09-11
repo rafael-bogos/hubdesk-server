@@ -95,7 +95,7 @@ describe('ticket com categoria', () => {
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.categoryId).toBe(category.id);
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const listResponse = await request(app)
       .get('/tickets')
@@ -115,7 +115,7 @@ describe('ticket com categoria', () => {
       .post('/tickets')
       .set('Authorization', `Bearer ${customer.accessToken}`)
       .send({ title: 'Chamado sem categoria', description: 'desc', priority: 'LOW' });
-    const ticketId = createResponse.body.id;
+    const ticketId = createResponse.body.number;
 
     const detailResponse = await request(app)
       .get(`/tickets/${ticketId}`)

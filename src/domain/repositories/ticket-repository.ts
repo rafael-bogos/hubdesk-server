@@ -41,6 +41,7 @@ export interface ListTicketsResult {
 export interface TicketRepository {
   create(data: CreateTicketData): Promise<Ticket>;
   findById(id: string): Promise<Ticket | null>;
+  findByNumber(number: number): Promise<Ticket | null>;
   list(filters: ListTicketsFilters): Promise<ListTicketsResult>;
   update(id: string, data: UpdateTicketData): Promise<Ticket>;
   setAssignees(id: string, userIds: string[]): Promise<Ticket>;

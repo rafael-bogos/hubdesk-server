@@ -1,13 +1,12 @@
 import { Attachment } from '../../../domain/entities/attachment.entity';
 import { Comment } from '../../../domain/entities/comment.entity';
-import { TicketNotFoundError } from '../../../domain/errors/ticket-errors';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
 import { CategoryRepository } from '../../../domain/repositories/category-repository';
 import { CommentRepository } from '../../../domain/repositories/comment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { UserRepository } from '../../../domain/repositories/user-repository';
 import { Actor } from '../../dtos/ticket.dto';
-import { assertCanViewTicket } from './ticket-access';
+import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 import { EnrichedTicket, enrichTicket } from './ticket-presenter';
 
 export interface GetTicketOutput {
@@ -25,18 +24,14 @@ export class GetTicketUseCase {
     private readonly categoryRepository: CategoryRepository,
   ) {}
 
-  async execute(ticketId: string, actor: Actor): Promise<GetTicketOutput> {
-    const ticket = await this.ticketRepository.findById(ticketId);
-
-    if (!ticket) {
-      throw new TicketNotFoundError();
-    }
+  async execute(ticketIdParam: string, actor: Actor): Promise<GetTicketOutput> {
+    const ticket = await resolveTicketByNumber(this.ticketRepository, ticketIdParam);
 
     assertCanViewTicket(actor, ticket);
 
     const [comments, attachments, enrichedTicket] = await Promise.all([
-      this.commentRepository.listByTicketId(ticketId),
-      this.attachmentRepository.listByTicketId(ticketId),
+      this.commentRepository.listByTicketId(ticket.id),
+      this.attachmentRepository.listByTicketId(ticket.id),
       enrichTicket(ticket, this.userRepository, this.categoryRepository),
     ]);
 

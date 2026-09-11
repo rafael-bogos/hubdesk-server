@@ -1,5 +1,6 @@
 import { Ticket } from '../../../domain/entities/ticket.entity';
 import { TicketNotFoundError } from '../../../domain/errors/ticket-errors';
+import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor } from '../../dtos/ticket.dto';
 
 export const canViewTicket = (actor: Actor, ticket: Ticket): boolean => {
@@ -20,4 +21,26 @@ export const assertCanViewTicket = (actor: Actor, ticket: Ticket): void => {
   if (!canViewTicket(actor, ticket)) {
     throw new TicketNotFoundError();
   }
+};
+
+// A URL/API identifica o chamado pelo `number` (ex: "1234"), não pelo cuid
+// interno (`id`) — que segue existindo só como chave primária/estrangeira no
+// banco. Toda entrada externa passa por aqui antes de tocar o resto do sistema.
+export const resolveTicketByNumber = async (
+  ticketRepository: TicketRepository,
+  rawNumber: string,
+): Promise<Ticket> => {
+  const number = Number(rawNumber);
+
+  if (!Number.isInteger(number)) {
+    throw new TicketNotFoundError();
+  }
+
+  const ticket = await ticketRepository.findByNumber(number);
+
+  if (!ticket) {
+    throw new TicketNotFoundError();
+  }
+
+  return ticket;
 };

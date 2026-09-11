@@ -50,6 +50,11 @@ export class PrismaTicketRepository implements TicketRepository {
     return ticket ? toDomain(ticket) : null;
   }
 
+  async findByNumber(number: number): Promise<Ticket | null> {
+    const ticket = await this.prisma.ticket.findUnique({ where: { number }, include: includeAssignees });
+    return ticket ? toDomain(ticket) : null;
+  }
+
   async list(filters: ListTicketsFilters): Promise<ListTicketsResult> {
     const where: Prisma.TicketWhereInput = {
       ...(filters.requesterId ? { requesterId: filters.requesterId } : {}),

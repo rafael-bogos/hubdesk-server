@@ -1,11 +1,10 @@
 import { Attachment } from '../../../domain/entities/attachment.entity';
-import { TicketNotFoundError } from '../../../domain/errors/ticket-errors';
 import { FileStorage } from '../../../domain/ports/file-storage';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
 import { CommentRepository } from '../../../domain/repositories/comment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor, AddAttachmentInput } from '../../dtos/ticket.dto';
-import { assertCanViewTicket } from './ticket-access';
+import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export class AddAttachmentUseCase {
   constructor(
@@ -15,12 +14,8 @@ export class AddAttachmentUseCase {
     private readonly commentRepository: CommentRepository,
   ) {}
 
-  async execute(ticketId: string, input: AddAttachmentInput, actor: Actor): Promise<Attachment> {
-    const ticket = await this.ticketRepository.findById(ticketId);
-
-    if (!ticket) {
-      throw new TicketNotFoundError();
-    }
+  async execute(ticketIdParam: string, input: AddAttachmentInput, actor: Actor): Promise<Attachment> {
+    const ticket = await resolveTicketByNumber(this.ticketRepository, ticketIdParam);
 
     assertCanViewTicket(actor, ticket);
 
@@ -33,7 +28,7 @@ export class AddAttachmentUseCase {
     });
 
     return this.attachmentRepository.create({
-      ticketId,
+      ticketId: ticket.id,
       commentId: input.commentId,
       filename: saved.filename,
       path: saved.path,

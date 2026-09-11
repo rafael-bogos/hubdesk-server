@@ -1,10 +1,10 @@
 import { Comment } from '../../../domain/entities/comment.entity';
 import { ForbiddenError } from '../../../domain/errors/auth-errors';
-import { CommentNotFoundError, TicketNotFoundError } from '../../../domain/errors/ticket-errors';
+import { CommentNotFoundError } from '../../../domain/errors/ticket-errors';
 import { CommentRepository } from '../../../domain/repositories/comment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor, UpdateCommentInternalInput } from '../../dtos/ticket.dto';
-import { assertCanViewTicket } from './ticket-access';
+import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export class UpdateCommentInternalUseCase {
   constructor(
@@ -13,7 +13,7 @@ export class UpdateCommentInternalUseCase {
   ) {}
 
   async execute(
-    ticketId: string,
+    ticketIdParam: string,
     commentId: string,
     input: UpdateCommentInternalInput,
     actor: Actor,
@@ -22,15 +22,12 @@ export class UpdateCommentInternalUseCase {
       throw new ForbiddenError();
     }
 
-    const ticket = await this.ticketRepository.findById(ticketId);
-    if (!ticket) {
-      throw new TicketNotFoundError();
-    }
+    const ticket = await resolveTicketByNumber(this.ticketRepository, ticketIdParam);
 
     assertCanViewTicket(actor, ticket);
 
     const comment = await this.commentRepository.findById(commentId);
-    if (!comment || comment.ticketId !== ticketId) {
+    if (!comment || comment.ticketId !== ticket.id) {
       throw new CommentNotFoundError();
     }
 

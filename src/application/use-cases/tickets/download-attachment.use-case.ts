@@ -1,9 +1,9 @@
 import { FileStorage } from '../../../domain/ports/file-storage';
-import { AttachmentNotFoundError, TicketNotFoundError } from '../../../domain/errors/ticket-errors';
+import { AttachmentNotFoundError } from '../../../domain/errors/ticket-errors';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor } from '../../dtos/ticket.dto';
-import { assertCanViewTicket } from './ticket-access';
+import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export interface DownloadAttachmentOutput {
   filename: string;
@@ -18,18 +18,14 @@ export class DownloadAttachmentUseCase {
     private readonly fileStorage: FileStorage,
   ) {}
 
-  async execute(ticketId: string, attachmentId: string, actor: Actor): Promise<DownloadAttachmentOutput> {
-    const ticket = await this.ticketRepository.findById(ticketId);
-
-    if (!ticket) {
-      throw new TicketNotFoundError();
-    }
+  async execute(ticketIdParam: string, attachmentId: string, actor: Actor): Promise<DownloadAttachmentOutput> {
+    const ticket = await resolveTicketByNumber(this.ticketRepository, ticketIdParam);
 
     assertCanViewTicket(actor, ticket);
 
     const attachment = await this.attachmentRepository.findById(attachmentId);
 
-    if (!attachment || attachment.ticketId !== ticketId) {
+    if (!attachment || attachment.ticketId !== ticket.id) {
       throw new AttachmentNotFoundError();
     }
 

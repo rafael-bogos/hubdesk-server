@@ -1,10 +1,10 @@
 import { Attachment } from '../../../domain/entities/attachment.entity';
 import { ForbiddenError } from '../../../domain/errors/auth-errors';
-import { AttachmentNotFoundError, TicketNotFoundError } from '../../../domain/errors/ticket-errors';
+import { AttachmentNotFoundError } from '../../../domain/errors/ticket-errors';
 import { AttachmentRepository } from '../../../domain/repositories/attachment-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { Actor, UpdateAttachmentInternalInput } from '../../dtos/ticket.dto';
-import { assertCanViewTicket } from './ticket-access';
+import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export class UpdateAttachmentInternalUseCase {
   constructor(
@@ -13,7 +13,7 @@ export class UpdateAttachmentInternalUseCase {
   ) {}
 
   async execute(
-    ticketId: string,
+    ticketIdParam: string,
     attachmentId: string,
     input: UpdateAttachmentInternalInput,
     actor: Actor,
@@ -22,15 +22,12 @@ export class UpdateAttachmentInternalUseCase {
       throw new ForbiddenError();
     }
 
-    const ticket = await this.ticketRepository.findById(ticketId);
-    if (!ticket) {
-      throw new TicketNotFoundError();
-    }
+    const ticket = await resolveTicketByNumber(this.ticketRepository, ticketIdParam);
 
     assertCanViewTicket(actor, ticket);
 
     const attachment = await this.attachmentRepository.findById(attachmentId);
-    if (!attachment || attachment.ticketId !== ticketId) {
+    if (!attachment || attachment.ticketId !== ticket.id) {
       throw new AttachmentNotFoundError();
     }
 
