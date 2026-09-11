@@ -18,10 +18,16 @@ import { PrismaTicketRepository } from '../../infrastructure/database/repositori
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
 import { TicketController } from '../../infrastructure/http/express/controllers/ticket-controller';
 import { makeTicketRouter } from '../../infrastructure/http/express/routes/ticket-routes';
+import { NullTicketNotifier } from '../../infrastructure/realtime/null-ticket-notifier';
 import { LocalFileStorage } from '../../infrastructure/storage/local-file-storage';
+import { TicketNotifier } from '../../domain/ports/ticket-notifier';
 import { env } from '../config/env';
 
-export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHandler) => {
+export const makeTicketModule = (
+  prisma: PrismaClient,
+  authenticate: RequestHandler,
+  ticketNotifier: TicketNotifier = new NullTicketNotifier(),
+) => {
   const ticketRepository = new PrismaTicketRepository(prisma);
   const commentRepository = new PrismaCommentRepository(prisma);
   const attachmentRepository = new PrismaAttachmentRepository(prisma);
@@ -29,7 +35,7 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
   const categoryRepository = new PrismaCategoryRepository(prisma);
   const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
 
-  const createTicketUseCase = new CreateTicketUseCase(ticketRepository);
+  const createTicketUseCase = new CreateTicketUseCase(ticketRepository, ticketNotifier);
   const getTicketUseCase = new GetTicketUseCase(
     ticketRepository,
     commentRepository,

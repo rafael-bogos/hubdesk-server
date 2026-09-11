@@ -9,13 +9,15 @@ import {
   notFoundHandler,
 } from '../infrastructure/http/express/middleware/error-middleware';
 import { logger } from '../infrastructure/logging/logger';
+import { SocketIoTicketNotifier } from '../infrastructure/realtime/socket-io-ticket-notifier';
+import { AppSocketServer } from '../infrastructure/realtime/socket-server';
 import { makeAdminModule } from './factories/make-admin-router';
 import { makeAuthModule } from './factories/make-auth-router';
 import { makeCategoryModule } from './factories/make-category-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 import { makeUserModule } from './factories/make-user-router';
 
-export const createApp = () => {
+export const createApp = (options: { io?: AppSocketServer } = {}) => {
   const app = express();
 
   app.use(helmet());
@@ -28,7 +30,8 @@ export const createApp = () => {
   const { router: authRouter, authenticate } = makeAuthModule(prisma);
   app.use(authRouter);
 
-  const { router: ticketRouter } = makeTicketModule(prisma, authenticate);
+  const ticketNotifier = options.io ? new SocketIoTicketNotifier(options.io) : undefined;
+  const { router: ticketRouter } = makeTicketModule(prisma, authenticate, ticketNotifier);
   app.use(ticketRouter);
 
   const { router: userRouter } = makeUserModule(prisma, authenticate);
