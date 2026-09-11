@@ -42,7 +42,9 @@ export class GetTicketUseCase {
 
     const visibleComments =
       actor.role === 'CUSTOMER' ? comments.filter((comment) => !comment.isInternal) : comments;
+    const visibleAttachments =
+      actor.role === 'CUSTOMER' ? attachments.filter((attachment) => !attachment.isInternal) : attachments;
 
-    return { ticket: enrichedTicket, comments: visibleComments, attachments };
+    return { ticket: enrichedTicket, comments: visibleComments, attachments: visibleAttachments };
   }
 }

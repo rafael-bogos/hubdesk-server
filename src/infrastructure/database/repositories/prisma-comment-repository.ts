@@ -35,4 +35,14 @@ export class PrismaCommentRepository implements CommentRepository {
 
     return comments.map(toDomain);
   }
+
+  async findById(id: string): Promise<Comment | null> {
+    const comment = await this.prisma.comment.findUnique({ where: { id } });
+    return comment ? toDomain(comment) : null;
+  }
+
+  async updateIsInternal(id: string, isInternal: boolean): Promise<Comment> {
+    const comment = await this.prisma.comment.update({ where: { id }, data: { isInternal } });
+    return toDomain(comment);
+  }
 }

@@ -131,6 +131,8 @@ model Attachment {
   uploadedById String @map("uploaded_by_id")
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
 
+  isInternal Boolean @default(false) @map("is_internal")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("attachments")

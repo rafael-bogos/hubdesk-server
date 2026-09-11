@@ -343,6 +343,91 @@ describe('POST /tickets/:id/comments', () => {
   });
 });
 
+describe('PATCH /tickets/:id/comments/:commentId/internal', () => {
+  it('agent marca a própria mensagem pública como interna e consegue reverter', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const commentResponse = await request(app)
+      .post(`/tickets/${ticketId}/comments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ body: 'Já estamos verificando' });
+    const commentId = commentResponse.body.id;
+
+    const toInternal = await request(app)
+      .patch(`/tickets/${ticketId}/comments/${commentId}/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(toInternal.status).toBe(200);
+    expect(toInternal.body.isInternal).toBe(true);
+
+    const toPublic = await request(app)
+      .patch(`/tickets/${ticketId}/comments/${commentId}/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: false });
+
+    expect(toPublic.status).toBe(200);
+    expect(toPublic.body.isInternal).toBe(false);
+  });
+
+  it('agent não consegue alterar mensagem de outro agent', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const commentResponse = await request(app)
+      .post(`/tickets/${ticketId}/comments`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ body: 'Mensagem do agent A' });
+    const commentId = commentResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/comments/${commentId}/internal`)
+      .set('Authorization', `Bearer ${agentB.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('customer não consegue marcar mensagem como interna', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const commentResponse = await request(app)
+      .post(`/tickets/${ticketId}/comments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ body: 'Alguma novidade?' });
+    const commentId = commentResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/comments/${commentId}/internal`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('retorna 404 para comentário inexistente', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/comments/inexistente/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(404);
+  });
+});
+
 describe('POST /tickets/:id/attachments', () => {
   it('faz upload de um anexo associado ao chamado correto', async () => {
     const customer = await registerAndLogin('CUSTOMER');
@@ -365,6 +450,163 @@ describe('POST /tickets/:id/attachments', () => {
       .set('Authorization', `Bearer ${customer.accessToken}`);
 
     expect(ticketResponse.body.attachments).toHaveLength(1);
+    expect(ticketResponse.body.attachments[0].isInternal).toBe(false);
+  });
+
+  it('customer não consegue enviar anexo interno', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const response = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .field('isInternal', 'true')
+      .attach('file', Buffer.from('conteudo de teste'), {
+        filename: 'evidencia.txt',
+        contentType: 'text/plain',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.isInternal).toBe(false);
+  });
+
+  it('agent envia anexo interno e ele fica invisível para o customer', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .field('isInternal', 'true')
+      .attach('file', Buffer.from('nota interna'), {
+        filename: 'nota.txt',
+        contentType: 'text/plain',
+      });
+
+    expect(uploadResponse.status).toBe(201);
+    expect(uploadResponse.body.isInternal).toBe(true);
+
+    const customerView = await request(app)
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(customerView.body.attachments).toHaveLength(0);
+
+    const agentView = await request(app)
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${agent.accessToken}`);
+
+    expect(agentView.body.attachments).toHaveLength(1);
+  });
+
+  it('anexo herda isInternal do comentário ao qual está vinculado quando não informado', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const commentResponse = await request(app)
+      .post(`/tickets/${ticketId}/comments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ body: 'Nota interna com anexo', isInternal: true });
+    const commentId = commentResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .field('commentId', commentId)
+      .attach('file', Buffer.from('conteudo'), { filename: 'anexo.txt', contentType: 'text/plain' });
+
+    expect(uploadResponse.status).toBe(201);
+    expect(uploadResponse.body.isInternal).toBe(true);
+  });
+});
+
+describe('PATCH /tickets/:id/attachments/:attachmentId/internal', () => {
+  it('agent marca o próprio anexo como interno e consegue reverter', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .attach('file', Buffer.from('conteudo'), { filename: 'anexo.txt', contentType: 'text/plain' });
+    const attachmentId = uploadResponse.body.id;
+
+    const toInternal = await request(app)
+      .patch(`/tickets/${ticketId}/attachments/${attachmentId}/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(toInternal.status).toBe(200);
+    expect(toInternal.body.isInternal).toBe(true);
+
+    const toPublic = await request(app)
+      .patch(`/tickets/${ticketId}/attachments/${attachmentId}/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: false });
+
+    expect(toPublic.status).toBe(200);
+    expect(toPublic.body.isInternal).toBe(false);
+  });
+
+  it('agent não consegue alterar anexo de outro agent', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .attach('file', Buffer.from('conteudo'), { filename: 'anexo.txt', contentType: 'text/plain' });
+    const attachmentId = uploadResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/attachments/${attachmentId}/internal`)
+      .set('Authorization', `Bearer ${agentB.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('customer não consegue marcar anexo como interno', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .attach('file', Buffer.from('conteudo'), { filename: 'anexo.txt', contentType: 'text/plain' });
+    const attachmentId = uploadResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/attachments/${attachmentId}/internal`)
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('retorna 404 para anexo inexistente', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/tickets/${ticketId}/attachments/inexistente/internal`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ isInternal: true });
+
+    expect(response.status).toBe(404);
   });
 });
 
@@ -415,5 +657,31 @@ describe('GET /tickets/:id/attachments/:attachmentId', () => {
       .set('Authorization', `Bearer ${otherCustomer.accessToken}`);
 
     expect(response.status).toBe(404);
+  });
+
+  it('customer não consegue baixar anexo interno mesmo sendo dono do chamado', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.id;
+
+    const uploadResponse = await request(app)
+      .post(`/tickets/${ticketId}/attachments`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .field('isInternal', 'true')
+      .attach('file', Buffer.from('nota interna'), { filename: 'nota.txt', contentType: 'text/plain' });
+    const attachmentId = uploadResponse.body.id;
+
+    const customerDownload = await request(app)
+      .get(`/tickets/${ticketId}/attachments/${attachmentId}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(customerDownload.status).toBe(404);
+
+    const agentDownload = await request(app)
+      .get(`/tickets/${ticketId}/attachments/${attachmentId}`)
+      .set('Authorization', `Bearer ${agent.accessToken}`);
+
+    expect(agentDownload.status).toBe(200);
   });
 });

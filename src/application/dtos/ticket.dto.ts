@@ -35,9 +35,18 @@ export interface AddCommentInput {
   isInternal?: boolean;
 }
 
+export interface UpdateCommentInternalInput {
+  isInternal: boolean;
+}
+
+export interface UpdateAttachmentInternalInput {
+  isInternal: boolean;
+}
+
 export interface AddAttachmentInput {
   originalName: string;
   mimeType: string;
   buffer: Buffer;
   commentId?: string | null;
+  isInternal?: boolean;
 }

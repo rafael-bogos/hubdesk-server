@@ -14,6 +14,7 @@ const toDomain = (attachment: PrismaAttachment): Attachment => ({
   mimeType: attachment.mimeType,
   size: attachment.size,
   uploadedById: attachment.uploadedById,
+  isInternal: attachment.isInternal,
   createdAt: attachment.createdAt,
 });
 
@@ -30,6 +31,7 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
         mimeType: data.mimeType,
         size: data.size,
         uploadedById: data.uploadedById,
+        isInternal: data.isInternal,
       },
     });
 
@@ -48,5 +50,10 @@ export class PrismaAttachmentRepository implements AttachmentRepository {
   async findById(id: string): Promise<Attachment | null> {
     const attachment = await this.prisma.attachment.findUnique({ where: { id } });
     return attachment ? toDomain(attachment) : null;
+  }
+
+  async updateIsInternal(id: string, isInternal: boolean): Promise<Attachment> {
+    const attachment = await this.prisma.attachment.update({ where: { id }, data: { isInternal } });
+    return toDomain(attachment);
   }
 }

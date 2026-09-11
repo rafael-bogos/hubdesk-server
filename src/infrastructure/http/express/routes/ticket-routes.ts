@@ -9,6 +9,8 @@ import {
   assignTicketSchema,
   createTicketSchema,
   listTicketsQuerySchema,
+  updateAttachmentInternalSchema,
+  updateCommentInternalSchema,
   updateTicketStatusSchema,
 } from '../schemas/ticket.schemas';
 
@@ -58,7 +60,19 @@ export const makeTicketRouter = (ticketController: TicketController, authenticat
     ticketController.assign,
   );
   router.post('/tickets/:id/comments', validate(addCommentSchema), ticketController.addComment);
+  router.patch(
+    '/tickets/:id/comments/:commentId/internal',
+    requireRole('AGENT', 'ADMIN'),
+    validate(updateCommentInternalSchema),
+    ticketController.updateCommentInternal,
+  );
   router.post('/tickets/:id/attachments', upload.single('file'), ticketController.addAttachment);
+  router.patch(
+    '/tickets/:id/attachments/:attachmentId/internal',
+    requireRole('AGENT', 'ADMIN'),
+    validate(updateAttachmentInternalSchema),
+    ticketController.updateAttachmentInternal,
+  );
   router.get('/tickets/:id/attachments/:attachmentId', ticketController.downloadAttachment);
 
   return router;

@@ -8,6 +8,8 @@ import { CreateTicketUseCase } from '../../application/use-cases/tickets/create-
 import { DownloadAttachmentUseCase } from '../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../application/use-cases/tickets/get-ticket.use-case';
 import { ListTicketsUseCase } from '../../application/use-cases/tickets/list-tickets.use-case';
+import { UpdateAttachmentInternalUseCase } from '../../application/use-cases/tickets/update-attachment-internal.use-case';
+import { UpdateCommentInternalUseCase } from '../../application/use-cases/tickets/update-comment-internal.use-case';
 import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/update-ticket-status.use-case';
 import { PrismaAttachmentRepository } from '../../infrastructure/database/repositories/prisma-attachment-repository';
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
@@ -39,7 +41,14 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
   const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository);
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository);
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository);
-  const addAttachmentUseCase = new AddAttachmentUseCase(ticketRepository, attachmentRepository, fileStorage);
+  const updateCommentInternalUseCase = new UpdateCommentInternalUseCase(ticketRepository, commentRepository);
+  const addAttachmentUseCase = new AddAttachmentUseCase(
+    ticketRepository,
+    attachmentRepository,
+    fileStorage,
+    commentRepository,
+  );
+  const updateAttachmentInternalUseCase = new UpdateAttachmentInternalUseCase(ticketRepository, attachmentRepository);
   const downloadAttachmentUseCase = new DownloadAttachmentUseCase(ticketRepository, attachmentRepository, fileStorage);
 
   const ticketController = new TicketController(
@@ -49,7 +58,9 @@ export const makeTicketModule = (prisma: PrismaClient, authenticate: RequestHand
     updateTicketStatusUseCase,
     assignTicketUseCase,
     addCommentUseCase,
+    updateCommentInternalUseCase,
     addAttachmentUseCase,
+    updateAttachmentInternalUseCase,
     downloadAttachmentUseCase,
   );
 

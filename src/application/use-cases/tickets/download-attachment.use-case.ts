@@ -33,6 +33,12 @@ export class DownloadAttachmentUseCase {
       throw new AttachmentNotFoundError();
     }
 
+    // Mascara anexos internos de customers como "não encontrado", igual ao
+    // tratamento de comentários internos e de chamados fora da visibilidade do actor.
+    if (attachment.isInternal && actor.role === 'CUSTOMER') {
+      throw new AttachmentNotFoundError();
+    }
+
     const buffer = await this.fileStorage.read(attachment.path);
 
     return { filename: attachment.filename, mimeType: attachment.mimeType, buffer };

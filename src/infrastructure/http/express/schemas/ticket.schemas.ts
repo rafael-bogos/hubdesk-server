@@ -31,3 +31,11 @@ export const addCommentSchema = z.object({
   body: z.string().min(1, 'Comentário não pode ser vazio'),
   isInternal: z.boolean().optional(),
 });
+
+export const updateCommentInternalSchema = z.object({
+  isInternal: z.boolean(),
+});
+
+export const updateAttachmentInternalSchema = z.object({
+  isInternal: z.boolean(),
+});

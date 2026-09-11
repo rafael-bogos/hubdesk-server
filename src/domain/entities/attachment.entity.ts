@@ -7,5 +7,6 @@ export interface Attachment {
   mimeType: string;
   size: number;
   uploadedById: string;
+  isInternal: boolean;
   createdAt: Date;
 }

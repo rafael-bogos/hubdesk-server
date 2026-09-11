@@ -6,6 +6,8 @@ import { CreateTicketUseCase } from '../../../../application/use-cases/tickets/c
 import { DownloadAttachmentUseCase } from '../../../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../../../application/use-cases/tickets/get-ticket.use-case';
 import { ListTicketsUseCase } from '../../../../application/use-cases/tickets/list-tickets.use-case';
+import { UpdateAttachmentInternalUseCase } from '../../../../application/use-cases/tickets/update-attachment-internal.use-case';
+import { UpdateCommentInternalUseCase } from '../../../../application/use-cases/tickets/update-comment-internal.use-case';
 import { UpdateTicketStatusUseCase } from '../../../../application/use-cases/tickets/update-ticket-status.use-case';
 import { Actor } from '../../../../application/dtos/ticket.dto';
 import { AppError } from '../../../../domain/errors/app-error';
@@ -19,7 +21,9 @@ export class TicketController {
     private readonly updateTicketStatusUseCase: UpdateTicketStatusUseCase,
     private readonly assignTicketUseCase: AssignTicketUseCase,
     private readonly addCommentUseCase: AddCommentUseCase,
+    private readonly updateCommentInternalUseCase: UpdateCommentInternalUseCase,
     private readonly addAttachmentUseCase: AddAttachmentUseCase,
+    private readonly updateAttachmentInternalUseCase: UpdateAttachmentInternalUseCase,
     private readonly downloadAttachmentUseCase: DownloadAttachmentUseCase,
   ) {}
 
@@ -32,6 +36,16 @@ export class TicketController {
 
   private ticketId(req: Request): string {
     const id = req.params.id;
+    return Array.isArray(id) ? id[0] : id;
+  }
+
+  private commentId(req: Request): string {
+    const id = req.params.commentId;
+    return Array.isArray(id) ? id[0] : id;
+  }
+
+  private attachmentId(req: Request): string {
+    const id = req.params.attachmentId;
     return Array.isArray(id) ? id[0] : id;
   }
 
@@ -89,6 +103,20 @@ export class TicketController {
     }
   };
 
+  updateCommentInternal = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const comment = await this.updateCommentInternalUseCase.execute(
+        this.ticketId(req),
+        this.commentId(req),
+        req.body,
+        this.actor(req),
+      );
+      res.status(200).json(comment);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   addAttachment = async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.file) {
@@ -102,6 +130,8 @@ export class TicketController {
           mimeType: req.file.mimetype,
           buffer: req.file.buffer,
           commentId: req.body.commentId,
+          // multipart/form-data só transmite strings; sem o campo, deixa o use case decidir o padrão.
+          isInternal: req.body.isInternal === undefined ? undefined : req.body.isInternal === 'true',
         },
         this.actor(req),
       );
@@ -112,15 +142,25 @@ export class TicketController {
     }
   };
 
+  updateAttachmentInternal = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const attachment = await this.updateAttachmentInternalUseCase.execute(
+        this.ticketId(req),
+        this.attachmentId(req),
+        req.body,
+        this.actor(req),
+      );
+      res.status(200).json(attachment);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   downloadAttachment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const attachmentId = Array.isArray(req.params.attachmentId)
-        ? req.params.attachmentId[0]
-        : req.params.attachmentId;
-
       const file = await this.downloadAttachmentUseCase.execute(
         this.ticketId(req),
-        attachmentId,
+        this.attachmentId(req),
         this.actor(req),
       );
 

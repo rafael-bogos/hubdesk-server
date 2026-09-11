@@ -8,10 +8,12 @@ export interface CreateAttachmentData {
   mimeType: string;
   size: number;
   uploadedById: string;
+  isInternal: boolean;
 }
 
 export interface AttachmentRepository {
   create(data: CreateAttachmentData): Promise<Attachment>;
   listByTicketId(ticketId: string): Promise<Attachment[]>;
   findById(id: string): Promise<Attachment | null>;
+  updateIsInternal(id: string, isInternal: boolean): Promise<Attachment>;
 }

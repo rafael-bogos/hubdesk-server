@@ -13,3 +13,10 @@ export class AttachmentNotFoundError extends AppError {
     this.name = 'AttachmentNotFoundError';
   }
 }
+
+export class CommentNotFoundError extends AppError {
+  constructor() {
+    super('Comentário não encontrado', 404);
+    this.name = 'CommentNotFoundError';
+  }
+}
