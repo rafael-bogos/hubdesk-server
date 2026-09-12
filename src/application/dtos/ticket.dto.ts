@@ -36,6 +36,16 @@ export interface AssignTicketInput {
   assigneeIds: string[];
 }
 
+// Edição em lote na listagem: cada campo é opcional e independente — o que
+// vier presente é aplicado a todos os chamados de `ticketNumbers`. Chamados
+// que falharem (não encontrado / sem permissão) não interrompem os demais.
+export interface BulkUpdateTicketsInput {
+  ticketNumbers: number[];
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeIds?: string[];
+}
+
 export interface AddCommentInput {
   body: string;
   isInternal?: boolean;

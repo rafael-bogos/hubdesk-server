@@ -26,7 +26,7 @@ export class UpdateTicketStatusUseCase {
       closedAt: input.status === 'RESOLVED' ? new Date() : null,
     });
 
-    await this.ticketNotificationService.notifyTicketUpdated(updated, actor.userId, 'status');
+    await this.ticketNotificationService.notifyTicketUpdated(updated, actor.userId, ['status']);
 
     return updated;
   }

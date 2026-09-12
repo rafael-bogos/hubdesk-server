@@ -1,4 +1,4 @@
-import { Ticket, TicketStatus } from '../../domain/entities/ticket.entity';
+import { Ticket, TicketPriority, TicketStatus } from '../../domain/entities/ticket.entity';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
 import { CreateNotificationData, NotificationRepository } from '../../domain/repositories/notification-repository';
 import { UserRepository } from '../../domain/repositories/user-repository';
@@ -9,6 +9,15 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   WAITING: 'Aguardando',
   RESOLVED: 'Resolvido',
 };
+
+const PRIORITY_LABELS: Record<TicketPriority, string> = {
+  LOW: 'Baixa',
+  MEDIUM: 'Média',
+  HIGH: 'Alta',
+  URGENT: 'Urgente',
+};
+
+type TicketChangeType = 'status' | 'assignment' | 'priority';
 
 // Mesmo limite de list-agents.use-case.ts — staff além disso não seria
 // notificado (aceito como limitação conhecida, não é o foco desta feature).
@@ -39,16 +48,20 @@ export class TicketNotificationService {
     });
   }
 
-  async notifyTicketUpdated(
-    ticket: Ticket,
-    actorId: string,
-    changeType: 'status' | 'assignment',
-  ): Promise<void> {
-    const recipientIds = await this.updateRecipientIds(ticket, changeType);
+  // `changeTypes` aceita mais de um aspecto pra cobrir edição em lote (ex:
+  // status + prioridade juntos): uma única notificação combinada, em vez de
+  // uma por campo alterado.
+  async notifyTicketUpdated(ticket: Ticket, actorId: string, changeTypes: TicketChangeType[]): Promise<void> {
+    const recipientIds = await this.updateRecipientIds(ticket, changeTypes);
     recipientIds.delete(actorId); // quem fez a mudança já vê o resultado na própria tela
 
-    const detail =
-      changeType === 'status' ? `Novo status: ${STATUS_LABELS[ticket.status]}` : 'Responsável atualizado';
+    const detail = changeTypes
+      .map((changeType) => {
+        if (changeType === 'status') return `Novo status: ${STATUS_LABELS[ticket.status]}`;
+        if (changeType === 'priority') return `Nova prioridade: ${PRIORITY_LABELS[ticket.priority]}`;
+        return 'Responsável atualizado';
+      })
+      .join(' · ');
 
     await this.dispatch([...recipientIds], {
       type: 'TICKET_UPDATED',
@@ -65,7 +78,7 @@ export class TicketNotificationService {
   // aberta na tela. Nota interna nunca vai pro solicitante (ele não pode nem
   // ver a mensagem).
   async notifyTicketMessage(ticket: Ticket, authorId: string, isInternal: boolean): Promise<void> {
-    const recipientIds = await this.updateRecipientIds(ticket, 'status');
+    const recipientIds = await this.updateRecipientIds(ticket, ['status']);
     recipientIds.delete(authorId);
     if (isInternal) {
       recipientIds.delete(ticket.requesterId);
@@ -93,7 +106,7 @@ export class TicketNotificationService {
     return items.map((user) => user.id);
   }
 
-  private async updateRecipientIds(ticket: Ticket, changeType: 'status' | 'assignment'): Promise<Set<string>> {
+  private async updateRecipientIds(ticket: Ticket, changeTypes: TicketChangeType[]): Promise<Set<string>> {
     const ids = new Set<string>([ticket.requesterId]);
 
     const { items: admins } = await this.userRepository.list({
@@ -108,7 +121,7 @@ export class TicketNotificationService {
     // um agent que via esse chamado por estar sem responsável precisa saber
     // que ele saiu da fila dele, mesmo não sendo o novo responsável — por
     // isso todo agent entra aqui, e não só quem ficou atribuído.
-    if (changeType === 'assignment' || ticket.assigneeIds.length === 0) {
+    if (changeTypes.includes('assignment') || ticket.assigneeIds.length === 0) {
       const { items: agents } = await this.userRepository.list({
         role: 'AGENT',
         active: true,
@@ -118,7 +131,7 @@ export class TicketNotificationService {
       agents.forEach((agent) => ids.add(agent.id));
     }
 
-    if (changeType === 'status') {
+    if (changeTypes.includes('status') || changeTypes.includes('priority')) {
       ticket.assigneeIds.forEach((id) => ids.add(id));
     }
 

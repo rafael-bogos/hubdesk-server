@@ -34,6 +34,20 @@ export const assignTicketSchema = z.object({
   assigneeIds: z.array(z.string().min(1)).max(50, 'No máximo 50 responsáveis por chamado'),
 });
 
+export const bulkUpdateTicketsSchema = z
+  .object({
+    ticketNumbers: z
+      .array(z.number().int().positive())
+      .min(1, 'Selecione ao menos um chamado')
+      .max(100, 'No máximo 100 chamados por vez'),
+    status: statusEnum.optional(),
+    priority: priorityEnum.optional(),
+    assigneeIds: z.array(z.string().min(1)).max(50, 'No máximo 50 responsáveis por chamado').optional(),
+  })
+  .refine((data) => data.status !== undefined || data.priority !== undefined || data.assigneeIds !== undefined, {
+    message: 'Informe ao menos um campo para atualizar',
+  });
+
 export const addCommentSchema = z.object({
   body: z.string().min(1, 'Comentário não pode ser vazio'),
   isInternal: z.boolean().optional(),

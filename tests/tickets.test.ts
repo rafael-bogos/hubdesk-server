@@ -781,3 +781,122 @@ describe('GET /tickets/:id/attachments/:attachmentId', () => {
     expect(agentDownload.status).toBe(200);
   });
 });
+
+describe('PATCH /tickets/bulk', () => {
+  it('customer não pode editar em lote', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${customer.accessToken}`)
+      .send({ ticketNumbers: [createResponse.body.number], status: 'IN_PROGRESS' });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('agent atualiza o status de vários chamados de uma vez', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const ticketA = await createTicket(customer.accessToken, { title: 'Chamado A' });
+    const ticketB = await createTicket(customer.accessToken, { title: 'Chamado B' });
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ ticketNumbers: [ticketA.body.number, ticketB.body.number], status: 'IN_PROGRESS' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.updated).toHaveLength(2);
+    expect(response.body.failed).toHaveLength(0);
+    expect(response.body.updated.every((t: { status: string }) => t.status === 'IN_PROGRESS')).toBe(true);
+
+    const getA = await request(app)
+      .get(`/tickets/${ticketA.body.number}`)
+      .set('Authorization', `Bearer ${agent.accessToken}`);
+    expect(getA.body.ticket.status).toBe('IN_PROGRESS');
+  });
+
+  it('agent atribui responsável e muda prioridade de vários chamados juntos', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const ticketA = await createTicket(customer.accessToken, { title: 'Chamado A' });
+    const ticketB = await createTicket(customer.accessToken, { title: 'Chamado B' });
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({
+        ticketNumbers: [ticketA.body.number, ticketB.body.number],
+        priority: 'URGENT',
+        assigneeIds: [agent.userId],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.updated).toHaveLength(2);
+    for (const ticket of response.body.updated) {
+      expect(ticket.priority).toBe('URGENT');
+      expect(ticket.assigneeIds).toEqual([agent.userId]);
+    }
+  });
+
+  it('chamado inexistente vai para failed sem impedir os demais', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const ticketA = await createTicket(customer.accessToken, { title: 'Chamado A' });
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ ticketNumbers: [ticketA.body.number, 999999], status: 'WAITING' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.updated).toHaveLength(1);
+    expect(response.body.failed).toEqual([{ ticketNumber: 999999, reason: expect.any(String) }]);
+  });
+
+  it('agent não consegue editar chamado já atribuído a outro agent', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agentA = await registerAndLogin('AGENT');
+    const agentB = await registerAndLogin('AGENT');
+    const ticket = await createTicket(customer.accessToken);
+
+    await request(app)
+      .patch(`/tickets/${ticket.body.number}/assign`)
+      .set('Authorization', `Bearer ${agentA.accessToken}`)
+      .send({ assigneeIds: [agentA.userId] });
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agentB.accessToken}`)
+      .send({ ticketNumbers: [ticket.body.number], status: 'IN_PROGRESS' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.updated).toHaveLength(0);
+    expect(response.body.failed).toHaveLength(1);
+  });
+
+  it('rejeita corpo sem nenhum campo de atualização', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const ticket = await createTicket(customer.accessToken);
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ ticketNumbers: [ticket.body.number] });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejeita mais de 100 chamados de uma vez', async () => {
+    const agent = await registerAndLogin('AGENT');
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ ticketNumbers: Array.from({ length: 101 }, (_, i) => i + 1), status: 'WAITING' });
+
+    expect(response.status).toBe(400);
+  });
+});

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { AddAttachmentUseCase } from '../../../../application/use-cases/tickets/add-attachment.use-case';
 import { AddCommentUseCase } from '../../../../application/use-cases/tickets/add-comment.use-case';
 import { AssignTicketUseCase } from '../../../../application/use-cases/tickets/assign-ticket.use-case';
+import { BulkUpdateTicketsUseCase } from '../../../../application/use-cases/tickets/bulk-update-tickets.use-case';
 import { CreateTicketUseCase } from '../../../../application/use-cases/tickets/create-ticket.use-case';
 import { DownloadAttachmentUseCase } from '../../../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../../../application/use-cases/tickets/get-ticket.use-case';
@@ -20,6 +21,7 @@ export class TicketController {
     private readonly listTicketsUseCase: ListTicketsUseCase,
     private readonly updateTicketStatusUseCase: UpdateTicketStatusUseCase,
     private readonly assignTicketUseCase: AssignTicketUseCase,
+    private readonly bulkUpdateTicketsUseCase: BulkUpdateTicketsUseCase,
     private readonly addCommentUseCase: AddCommentUseCase,
     private readonly updateCommentInternalUseCase: UpdateCommentInternalUseCase,
     private readonly addAttachmentUseCase: AddAttachmentUseCase,
@@ -89,6 +91,15 @@ export class TicketController {
     try {
       const ticket = await this.assignTicketUseCase.execute(this.ticketId(req), req.body, this.actor(req));
       res.status(200).json(ticket);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  bulkUpdate = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.bulkUpdateTicketsUseCase.execute(req.body, this.actor(req));
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

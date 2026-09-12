@@ -7,6 +7,7 @@ import { validate, validateQuery } from '../middleware/validate';
 import {
   addCommentSchema,
   assignTicketSchema,
+  bulkUpdateTicketsSchema,
   createTicketSchema,
   listTicketsQuerySchema,
   updateAttachmentInternalSchema,
@@ -46,6 +47,12 @@ export const makeTicketRouter = (ticketController: TicketController, authenticat
 
   router.post('/tickets', validate(createTicketSchema), ticketController.create);
   router.get('/tickets', validateQuery(listTicketsQuerySchema), ticketController.list);
+  router.patch(
+    '/tickets/bulk',
+    requireRole('AGENT', 'ADMIN'),
+    validate(bulkUpdateTicketsSchema),
+    ticketController.bulkUpdate,
+  );
   router.get('/tickets/:id', ticketController.get);
   router.patch(
     '/tickets/:id/status',

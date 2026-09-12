@@ -4,6 +4,7 @@ import { RequestHandler } from 'express';
 import { AddAttachmentUseCase } from '../../application/use-cases/tickets/add-attachment.use-case';
 import { AddCommentUseCase } from '../../application/use-cases/tickets/add-comment.use-case';
 import { AssignTicketUseCase } from '../../application/use-cases/tickets/assign-ticket.use-case';
+import { BulkUpdateTicketsUseCase } from '../../application/use-cases/tickets/bulk-update-tickets.use-case';
 import { CreateTicketUseCase } from '../../application/use-cases/tickets/create-ticket.use-case';
 import { DownloadAttachmentUseCase } from '../../application/use-cases/tickets/download-attachment.use-case';
 import { GetTicketUseCase } from '../../application/use-cases/tickets/get-ticket.use-case';
@@ -55,6 +56,7 @@ export const makeTicketModule = (
   const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
   const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository, ticketNotificationService);
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository, ticketNotificationService);
+  const bulkUpdateTicketsUseCase = new BulkUpdateTicketsUseCase(ticketRepository, ticketNotificationService);
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository, ticketNotificationService);
   const updateCommentInternalUseCase = new UpdateCommentInternalUseCase(ticketRepository, commentRepository);
   const addAttachmentUseCase = new AddAttachmentUseCase(
@@ -73,6 +75,7 @@ export const makeTicketModule = (
     listTicketsUseCase,
     updateTicketStatusUseCase,
     assignTicketUseCase,
+    bulkUpdateTicketsUseCase,
     addCommentUseCase,
     updateCommentInternalUseCase,
     addAttachmentUseCase,

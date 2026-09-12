@@ -22,7 +22,7 @@ export class AssignTicketUseCase {
 
     const updated = await this.ticketRepository.setAssignees(ticket.id, input.assigneeIds);
 
-    await this.ticketNotificationService.notifyTicketUpdated(updated, actor.userId, 'assignment');
+    await this.ticketNotificationService.notifyTicketUpdated(updated, actor.userId, ['assignment']);
 
     return updated;
   }
