@@ -35,6 +35,7 @@ export class ListTicketsUseCase {
       // agente acima já impede um AGENT de usar isto pra espiar a fila de
       // outro atendente (a interseção das duas dá lista vazia).
       assigneeId: input.assigneeId,
+      resolved: input.resolved,
       search: input.search?.trim() || undefined,
       requesterId: actor.role === 'CUSTOMER' ? actor.userId : undefined,
       visibleToAgentId: actor.role === 'AGENT' ? actor.userId : undefined,

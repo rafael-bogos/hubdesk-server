@@ -27,6 +27,10 @@ export interface ListTicketsFilters {
   status?: TicketStatus;
   priority?: TicketPriority;
   categoryId?: string;
+  // Separa a fila principal (resolved: false) dos chamados já resolvidos
+  // (resolved: true) — telas diferentes, nunca misturados. Ignorado se
+  // `status` já vier definido (filtro explícito tem prioridade).
+  resolved?: boolean;
   // Casa por número exato (se for um inteiro válido) ou por trecho do título
   // (case-insensitive).
   search?: string;

@@ -215,6 +215,66 @@ describe('GET /tickets', () => {
     expect(response.body.total).toBe(1);
     expect(response.body.items[0].title).toBe('Segundo chamado');
   });
+
+  it('resolved=false esconde os chamados resolvidos da fila principal', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    await createTicket(customer.accessToken, { title: 'Ainda aberto' });
+    const resolvedResponse = await createTicket(customer.accessToken, { title: 'Já resolvido' });
+    await request(app)
+      .patch(`/tickets/${resolvedResponse.body.number}/status`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ status: 'RESOLVED' });
+
+    const response = await request(app)
+      .get('/tickets?resolved=false')
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Ainda aberto');
+  });
+
+  it('resolved=true mostra só os chamados resolvidos', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    await createTicket(customer.accessToken, { title: 'Ainda aberto' });
+    const resolvedResponse = await createTicket(customer.accessToken, { title: 'Já resolvido' });
+    await request(app)
+      .patch(`/tickets/${resolvedResponse.body.number}/status`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ status: 'RESOLVED' });
+
+    const response = await request(app)
+      .get('/tickets?resolved=true')
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Já resolvido');
+  });
+
+  it('status explícito tem prioridade sobre resolved', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+
+    const waitingResponse = await createTicket(customer.accessToken, { title: 'Aguardando' });
+    await request(app)
+      .patch(`/tickets/${waitingResponse.body.number}/status`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ status: 'WAITING' });
+
+    // resolved=true pediria só RESOLVED, mas status=WAITING é explícito e vence.
+    const response = await request(app)
+      .get('/tickets?resolved=true&status=WAITING')
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0].title).toBe('Aguardando');
+  });
 });
 
 describe('GET /tickets/:id', () => {

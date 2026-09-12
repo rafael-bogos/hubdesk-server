@@ -39,7 +39,6 @@ enum TicketStatus {
   IN_PROGRESS
   WAITING
   RESOLVED
-  CLOSED
 }
 
 enum TicketPriority {

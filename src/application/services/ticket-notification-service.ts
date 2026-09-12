@@ -8,7 +8,6 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   IN_PROGRESS: 'Em andamento',
   WAITING: 'Aguardando',
   RESOLVED: 'Resolvido',
-  CLOSED: 'Fechado',
 };
 
 // Mesmo limite de list-agents.use-case.ts — staff além disso não seria

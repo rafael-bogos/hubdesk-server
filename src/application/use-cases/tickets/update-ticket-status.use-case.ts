@@ -22,7 +22,8 @@ export class UpdateTicketStatusUseCase {
 
     const updated = await this.ticketRepository.update(ticket.id, {
       status: input.status,
-      closedAt: input.status === 'CLOSED' ? new Date() : null,
+      // RESOLVED é o status terminal agora que CLOSED não existe mais.
+      closedAt: input.status === 'RESOLVED' ? new Date() : null,
     });
 
     await this.ticketNotificationService.notifyTicketUpdated(updated, actor.userId, 'status');

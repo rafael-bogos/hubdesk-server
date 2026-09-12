@@ -25,7 +25,7 @@ export class PrismaDashboardStatsRepository implements DashboardStatsRepository 
       this.prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
     ]);
 
-    const ticketsByStatus = zeroed<TicketStatus>(['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED']);
+    const ticketsByStatus = zeroed<TicketStatus>(['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']);
     byStatus.forEach((row) => {
       ticketsByStatus[row.status] = row._count._all;
     });

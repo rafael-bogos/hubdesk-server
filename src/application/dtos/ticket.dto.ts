@@ -18,6 +18,9 @@ export interface ListTicketsInput {
   priority?: TicketPriority;
   categoryId?: string;
   assigneeId?: string;
+  // Separa a fila principal dos chamados já resolvidos — ver
+  // ListTicketsFilters.resolved.
+  resolved?: boolean;
   // Casa por número exato (se for um inteiro válido) ou por trecho do título
   // (case-insensitive).
   search?: string;

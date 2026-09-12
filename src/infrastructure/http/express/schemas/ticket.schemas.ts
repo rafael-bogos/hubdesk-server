@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const priorityEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
-const statusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED']);
+const statusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']);
 
 export const createTicketSchema = z.object({
   title: z.string().min(3, 'Título deve ter ao menos 3 caracteres'),
@@ -15,6 +15,12 @@ export const listTicketsQuerySchema = z.object({
   priority: priorityEnum.optional(),
   categoryId: z.string().optional(),
   assigneeId: z.string().optional(),
+  // z.coerce.boolean() não serve aqui: "false" (string, vindo da query) é
+  // truthy em JS e viraria `true`. Só aceita os literais esperados.
+  resolved: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === 'true')),
   search: z.string().min(1).max(200).optional(),
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().optional(),

@@ -81,9 +81,20 @@ export class PrismaTicketRepository implements TicketRepository {
       andConditions.push({ OR: searchConditions });
     }
 
+    // `status` explícito sempre vence; sem ele, `resolved` decide se mostra só
+    // resolvidos, só os ativos (tudo que não é RESOLVED), ou não filtra por
+    // status nenhum (nenhum dos dois informado).
+    const statusFilter: Prisma.TicketWhereInput['status'] = filters.status
+      ? filters.status
+      : filters.resolved === true
+        ? 'RESOLVED'
+        : filters.resolved === false
+          ? { not: 'RESOLVED' }
+          : undefined;
+
     const where: Prisma.TicketWhereInput = {
       ...(filters.requesterId ? { requesterId: filters.requesterId } : {}),
-      ...(filters.status ? { status: filters.status } : {}),
+      ...(statusFilter !== undefined ? { status: statusFilter } : {}),
       ...(filters.priority ? { priority: filters.priority } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
       ...(filters.assigneeId ? { assignees: { some: { userId: filters.assigneeId } } } : {}),
