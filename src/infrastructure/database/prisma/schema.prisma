@@ -38,6 +38,10 @@ enum TicketStatus {
   OPEN
   IN_PROGRESS
   WAITING
+  // Aguardando o prazo de fechamento automático (ver TicketClosureScheduler) —
+  // ainda não é RESOLVED, mas vira sozinho quando `scheduledClosureAt` chega,
+  // a menos que alguém troque o status antes disso.
+  PENDING_CLOSURE
   RESOLVED
 }
 
@@ -79,6 +83,9 @@ model Ticket {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   closedAt  DateTime? @map("closed_at")
+  // Só preenchido enquanto status = PENDING_CLOSURE — quando o job do BullMQ
+  // roda (ou o status muda antes disso), volta a null.
+  scheduledClosureAt DateTime? @map("scheduled_closure_at")
 
   comments      Comment[]
   attachments   Attachment[]

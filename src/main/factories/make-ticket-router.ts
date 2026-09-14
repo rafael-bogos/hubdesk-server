@@ -14,6 +14,7 @@ import { UpdateCommentInternalUseCase } from '../../application/use-cases/ticket
 import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/update-ticket-status.use-case';
 import { TicketNotificationService } from '../../application/services/ticket-notification-service';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
+import { TicketClosureScheduler } from '../../domain/ports/ticket-closure-scheduler';
 import { PrismaAttachmentRepository } from '../../infrastructure/database/repositories/prisma-attachment-repository';
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaCommentRepository } from '../../infrastructure/database/repositories/prisma-comment-repository';
@@ -23,6 +24,7 @@ import { PrismaUserRepository } from '../../infrastructure/database/repositories
 import { TicketController } from '../../infrastructure/http/express/controllers/ticket-controller';
 import { makeTicketRouter } from '../../infrastructure/http/express/routes/ticket-routes';
 import { NullRealtimeNotifier } from '../../infrastructure/realtime/null-realtime-notifier';
+import { NullTicketClosureScheduler } from '../../infrastructure/queue/null-ticket-closure-scheduler';
 import { LocalFileStorage } from '../../infrastructure/storage/local-file-storage';
 import { env } from '../config/env';
 
@@ -30,6 +32,7 @@ export const makeTicketModule = (
   prisma: PrismaClient,
   authenticate: RequestHandler,
   realtimeNotifier: RealtimeNotifier = new NullRealtimeNotifier(),
+  ticketClosureScheduler: TicketClosureScheduler = new NullTicketClosureScheduler(),
 ) => {
   const ticketRepository = new PrismaTicketRepository(prisma);
   const commentRepository = new PrismaCommentRepository(prisma);
@@ -54,9 +57,17 @@ export const makeTicketModule = (
     categoryRepository,
   );
   const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
-  const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(ticketRepository, ticketNotificationService);
+  const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(
+    ticketRepository,
+    ticketNotificationService,
+    ticketClosureScheduler,
+  );
   const assignTicketUseCase = new AssignTicketUseCase(ticketRepository, ticketNotificationService);
-  const bulkUpdateTicketsUseCase = new BulkUpdateTicketsUseCase(ticketRepository, ticketNotificationService);
+  const bulkUpdateTicketsUseCase = new BulkUpdateTicketsUseCase(
+    ticketRepository,
+    ticketNotificationService,
+    ticketClosureScheduler,
+  );
   const addCommentUseCase = new AddCommentUseCase(ticketRepository, commentRepository, ticketNotificationService);
   const updateCommentInternalUseCase = new UpdateCommentInternalUseCase(ticketRepository, commentRepository);
   const addAttachmentUseCase = new AddAttachmentUseCase(

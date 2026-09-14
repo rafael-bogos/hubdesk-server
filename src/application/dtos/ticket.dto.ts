@@ -30,6 +30,9 @@ export interface ListTicketsInput {
 
 export interface UpdateTicketStatusInput {
   status: TicketStatus;
+  // Obrigatório quando status === 'PENDING_CLOSURE' (validado no schema
+  // Zod) — data/hora em que o chamado fecha sozinho se ninguém mexer antes.
+  scheduledClosureAt?: Date;
 }
 
 export interface AssignTicketInput {
@@ -42,6 +45,9 @@ export interface AssignTicketInput {
 export interface BulkUpdateTicketsInput {
   ticketNumbers: number[];
   status?: TicketStatus;
+  // Obrigatório quando status === 'PENDING_CLOSURE' — mesma data/hora vale
+  // pra todos os chamados do lote.
+  scheduledClosureAt?: Date;
   priority?: TicketPriority;
   assigneeIds?: string[];
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const priorityEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
-const statusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']);
+const statusEnum = z.enum(['OPEN', 'IN_PROGRESS', 'WAITING', 'PENDING_CLOSURE', 'RESOLVED']);
 
 export const createTicketSchema = z.object({
   title: z.string().min(3, 'Título deve ter ao menos 3 caracteres'),
@@ -26,9 +26,15 @@ export const listTicketsQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().optional(),
 });
 
-export const updateTicketStatusSchema = z.object({
-  status: statusEnum,
-});
+export const updateTicketStatusSchema = z
+  .object({
+    status: statusEnum,
+    scheduledClosureAt: z.coerce.date().optional(),
+  })
+  .refine((data) => data.status !== 'PENDING_CLOSURE' || data.scheduledClosureAt !== undefined, {
+    message: 'Informe a data e horário do fechamento automático',
+    path: ['scheduledClosureAt'],
+  });
 
 export const assignTicketSchema = z.object({
   assigneeIds: z.array(z.string().min(1)).max(50, 'No máximo 50 responsáveis por chamado'),
@@ -41,11 +47,17 @@ export const bulkUpdateTicketsSchema = z
       .min(1, 'Selecione ao menos um chamado')
       .max(100, 'No máximo 100 chamados por vez'),
     status: statusEnum.optional(),
+    // Mesma data/hora vale pra todos os chamados do lote.
+    scheduledClosureAt: z.coerce.date().optional(),
     priority: priorityEnum.optional(),
     assigneeIds: z.array(z.string().min(1)).max(50, 'No máximo 50 responsáveis por chamado').optional(),
   })
   .refine((data) => data.status !== undefined || data.priority !== undefined || data.assigneeIds !== undefined, {
     message: 'Informe ao menos um campo para atualizar',
+  })
+  .refine((data) => data.status !== 'PENDING_CLOSURE' || data.scheduledClosureAt !== undefined, {
+    message: 'Informe a data e horário do fechamento automático',
+    path: ['scheduledClosureAt'],
   });
 
 export const addCommentSchema = z.object({

@@ -13,6 +13,7 @@ services:
       DATABASE_URL: postgresql://hubdesk:hubdesk@db:5432/hubdesk?schema=public
       JWT_SECRET: change-me-in-production
       UPLOADS_DIR: uploads
+      REDIS_URL: redis://redis:6379
       # Opcionais — defina num arquivo `.env` ao lado deste compose para customizar
       # o admin criado pelo seed na primeira subida (veja .env.example).
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
@@ -22,6 +23,8 @@ services:
       - hubdesk_uploads:/app/uploads
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -45,6 +48,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Fila do BullMQ (fechamento automático de chamados PENDING_CLOSURE).
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - hubdesk_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   hubdesk_db_data:
   hubdesk_uploads:
+  hubdesk_redis_data:

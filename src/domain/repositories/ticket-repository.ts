@@ -13,6 +13,7 @@ export interface UpdateTicketData {
   priority?: TicketPriority;
   categoryId?: string | null;
   closedAt?: Date | null;
+  scheduledClosureAt?: Date | null;
 }
 
 export interface ListTicketsFilters {

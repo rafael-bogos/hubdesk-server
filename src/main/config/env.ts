@@ -6,6 +6,9 @@ export const env = {
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   uploadsDir: process.env.UPLOADS_DIR ?? 'uploads',
+  // Redis usado pela fila do BullMQ (fechamento automático de chamados
+  // PENDING_CLOSURE) — ver infrastructure/queue.
+  redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6381',
   // Origem do frontend, liberada no CORS do Socket.io (o navegador conecta
   // direto nesse servidor pra receber notificações em tempo real).
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:3000',

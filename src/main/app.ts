@@ -9,6 +9,7 @@ import {
   notFoundHandler,
 } from '../infrastructure/http/express/middleware/error-middleware';
 import { logger } from '../infrastructure/logging/logger';
+import { TicketClosureScheduler } from '../domain/ports/ticket-closure-scheduler';
 import { SocketIoRealtimeNotifier } from '../infrastructure/realtime/socket-io-realtime-notifier';
 import { AppSocketServer } from '../infrastructure/realtime/socket-server';
 import { makeAdminModule } from './factories/make-admin-router';
@@ -18,7 +19,9 @@ import { makeNotificationModule } from './factories/make-notification-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 import { makeUserModule } from './factories/make-user-router';
 
-export const createApp = (options: { io?: AppSocketServer } = {}) => {
+export const createApp = (
+  options: { io?: AppSocketServer; ticketClosureScheduler?: TicketClosureScheduler } = {},
+) => {
   const app = express();
 
   app.use(helmet());
@@ -32,7 +35,12 @@ export const createApp = (options: { io?: AppSocketServer } = {}) => {
   app.use(authRouter);
 
   const realtimeNotifier = options.io ? new SocketIoRealtimeNotifier(options.io) : undefined;
-  const { router: ticketRouter } = makeTicketModule(prisma, authenticate, realtimeNotifier);
+  const { router: ticketRouter } = makeTicketModule(
+    prisma,
+    authenticate,
+    realtimeNotifier,
+    options.ticketClosureScheduler,
+  );
   app.use(ticketRouter);
 
   const { router: notificationRouter } = makeNotificationModule(prisma, authenticate);

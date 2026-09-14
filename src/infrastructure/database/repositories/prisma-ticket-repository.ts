@@ -23,6 +23,7 @@ const toDomain = (ticket: PrismaTicketWithAssignees): Ticket => ({
   createdAt: ticket.createdAt,
   updatedAt: ticket.updatedAt,
   closedAt: ticket.closedAt,
+  scheduledClosureAt: ticket.scheduledClosureAt,
 });
 
 const includeAssignees = { assignees: { select: { userId: true } } } as const;
@@ -123,6 +124,7 @@ export class PrismaTicketRepository implements TicketRepository {
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.closedAt !== undefined ? { closedAt: data.closedAt } : {}),
+        ...(data.scheduledClosureAt !== undefined ? { scheduledClosureAt: data.scheduledClosureAt } : {}),
       },
       include: includeAssignees,
     });

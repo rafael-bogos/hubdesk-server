@@ -18,5 +18,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # Fila do BullMQ (fechamento automático de chamados PENDING_CLOSURE) — porta
+  # própria (6381) pra não colidir com outro Redis que já esteja rodando na
+  # máquina do dev.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6381:6379'
+    volumes:
+      - hubdesk_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   hubdesk_db_data:
+  hubdesk_redis_data:

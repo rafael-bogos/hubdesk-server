@@ -7,6 +7,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'Aberto',
   IN_PROGRESS: 'Em andamento',
   WAITING: 'Aguardando',
+  PENDING_CLOSURE: 'Pendente de fechamento',
   RESOLVED: 'Resolvido',
 };
 

@@ -1,4 +1,4 @@
-export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'RESOLVED';
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'PENDING_CLOSURE' | 'RESOLVED';
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export interface Ticket {
@@ -14,4 +14,6 @@ export interface Ticket {
   createdAt: Date;
   updatedAt: Date;
   closedAt: Date | null;
+  // Só não-null enquanto status === 'PENDING_CLOSURE' — ver TicketClosureScheduler.
+  scheduledClosureAt: Date | null;
 }
