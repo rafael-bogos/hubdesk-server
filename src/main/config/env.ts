@@ -12,4 +12,13 @@ export const env = {
   // Origem do frontend, liberada no CORS do Socket.io (o navegador conecta
   // direto nesse servidor pra receber notificações em tempo real).
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:3000',
+  // URL pública deste servidor — usada pra montar as callback URLs do OAuth
+  // (Google precisa saber pra onde redirecionar de volta).
+  backendPublicUrl: process.env.BACKEND_PUBLIC_URL ?? 'http://localhost:3001',
+  // Segredo próprio do better-auth (assina a sessão dele) — separado do
+  // JWT_SECRET pra não misturar os dois mecanismos de auth.
+  betterAuthSecret: process.env.BETTER_AUTH_SECRET ?? '',
+  // Chave (32 bytes em base64) pra cifrar client secrets de OAuth salvos no
+  // banco (ver infrastructure/crypto/secret-cipher.ts).
+  settingsEncryptionKey: process.env.SETTINGS_ENCRYPTION_KEY ?? '',
 };

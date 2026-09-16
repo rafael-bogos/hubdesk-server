@@ -17,12 +17,23 @@ model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  // Default "" (nunca um hash bcrypt válido) pra permitir usuários criados
+  // via OAuth pelo better-auth, que não passam senha nenhuma no create —
+  // bcrypt.compare contra "" sempre dá false, então login por senha some
+  // sozinho pra essas contas, sem precisar mexer no use case de login.
+  passwordHash String   @default("") @map("password_hash")
   role         Role     @default(CUSTOMER)
   tokenVersion Int      @default(0) @map("token_version")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  // Campos exigidos pelo better-auth (login via Google / OAuth customizado) —
+  // ver infrastructure/auth/better-auth-instance.ts. `emailVerified` de
+  // usuários já existentes é retroativamente marcado true na migration (eles
+  // já passaram pelo nosso próprio registro), o que habilita account linking
+  // automático se um dia logarem via OAuth com o mesmo e-mail.
+  emailVerified Boolean @default(false) @map("email_verified")
+  image         String?
 
   ticketsRequested   Ticket[]         @relation("TicketRequester")
   ticketAssignments  TicketAssignee[]
@@ -30,8 +41,91 @@ model User {
   attachments        Attachment[]
   auditLogs          AuditLog[]
   notifications      Notification[]
+  accounts           Account[]
+  sessions           Session[]
 
   @@map("users")
+}
+
+// A partir daqui: tabelas próprias do better-auth (login via Google / OAuth
+// customizado) — nomes/campos vêm do schema padrão dele (conferido rodando
+// `getSchema()` da versão instalada, não adivinhado). Usadas só internamente
+// pelo better-auth; a API do Hubdesk continua emitindo seu próprio JWT depois
+// que ele confirma quem é o usuário (ver infrastructure/auth).
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("accounts")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("verifications")
+}
+
+// Configuração única (uma linha, id fixo) de quais métodos de login estão
+// habilitados — editada pelo admin em /admin/login-settings. Client secrets
+// ficam cifrados (ver infrastructure/crypto/secret-cipher.ts), nunca em texto
+// puro no banco.
+model LoginSettings {
+  id                                String   @id @default("singleton")
+  emailPasswordEnabled              Boolean  @default(true) @map("email_password_enabled")
+  googleEnabled                     Boolean  @default(false) @map("google_enabled")
+  googleClientId                    String?  @map("google_client_id")
+  googleClientSecretEncrypted       String?  @map("google_client_secret_encrypted")
+  customOAuthEnabled                Boolean  @default(false) @map("custom_oauth_enabled")
+  customOAuthProviderId             String?  @map("custom_oauth_provider_id")
+  customOAuthProviderName           String?  @map("custom_oauth_provider_name")
+  customOAuthClientId               String?  @map("custom_oauth_client_id")
+  customOAuthClientSecretEncrypted  String?  @map("custom_oauth_client_secret_encrypted")
+  customOAuthAuthorizationUrl       String?  @map("custom_oauth_authorization_url")
+  customOAuthTokenUrl               String?  @map("custom_oauth_token_url")
+  customOAuthUserInfoUrl            String?  @map("custom_oauth_user_info_url")
+  customOAuthScopes                 String?  @map("custom_oauth_scopes")
+  // Logo do botão do OAuth customizado (Google já tem o ícone padrão dele
+  // embutido) — path no FileStorage, igual aos anexos de chamado. Sem logo
+  // enviada, a tela de login cai num ícone genérico.
+  customOAuthLogoPath               String?  @map("custom_oauth_logo_path")
+  customOAuthLogoMimeType           String?  @map("custom_oauth_logo_mime_type")
+  // "google" | "custom" | "email" — qual método aparece em destaque na tela
+  // de login.
+  defaultMethod                     String   @default("google") @map("default_method")
+  updatedAt                         DateTime @updatedAt @map("updated_at")
+
+  @@map("login_settings")
 }
 
 enum TicketStatus {

@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: hubdesk
       POSTGRES_DB: hubdesk
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - hubdesk_db_data:/var/lib/postgresql/data
       - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
