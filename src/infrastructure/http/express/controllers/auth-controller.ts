@@ -77,7 +77,14 @@ export class AuthController {
       if (!user) {
         throw new UnauthorizedError();
       }
-      res.status(200).json({ id: user.id, name: user.name, email: user.email, role: user.role });
+      res.status(200).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        emailOnTicketUpdated: user.emailOnTicketUpdated,
+        emailOnTicketClosed: user.emailOnTicketClosed,
+      });
     } catch (err) {
       next(err);
     }

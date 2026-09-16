@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TicketNotificationService } from '../src/application/services/ticket-notification-service';
 import { Ticket } from '../src/domain/entities/ticket.entity';
+import { EmailSender, SendEmailInput } from '../src/domain/ports/email-sender';
 import { RealtimeNotifier } from '../src/domain/ports/realtime-notifier';
 import {
   CreateNotificationData,
@@ -118,6 +119,14 @@ class FakeRealtimeNotifier implements RealtimeNotifier {
   pushTicketMessage(): void {}
 }
 
+class FakeEmailSender implements EmailSender {
+  sent: SendEmailInput[] = [];
+
+  async send(input: SendEmailInput): Promise<void> {
+    this.sent.push(input);
+  }
+}
+
 describe('processTicketClosureJob', () => {
   it('fecha (RESOLVED) um chamado que ainda está PENDING_CLOSURE e notifica o solicitante', async () => {
     const ticketRepository = new FakeTicketRepository(baseTicket());
@@ -126,6 +135,7 @@ describe('processTicketClosureJob', () => {
       new FakeUserRepository(),
       notificationRepository,
       new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
     );
 
     await processTicketClosureJob('ticket-1', ticketRepository, ticketNotificationService);
@@ -148,6 +158,7 @@ describe('processTicketClosureJob', () => {
       new FakeUserRepository(),
       notificationRepository,
       new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
     );
 
     await processTicketClosureJob('ticket-1', ticketRepository, ticketNotificationService);
@@ -163,6 +174,7 @@ describe('processTicketClosureJob', () => {
       new FakeUserRepository(),
       notificationRepository,
       new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
     );
 
     await expect(

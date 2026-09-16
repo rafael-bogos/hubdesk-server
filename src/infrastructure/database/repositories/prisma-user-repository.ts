@@ -10,6 +10,8 @@ const toDomain = (user: PrismaUser): User => ({
   role: user.role as Role,
   tokenVersion: user.tokenVersion,
   active: user.active,
+  emailOnTicketUpdated: user.emailOnTicketUpdated,
+  emailOnTicketClosed: user.emailOnTicketClosed,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -50,6 +52,12 @@ export class PrismaUserRepository implements UserRepository {
         ...(data.role !== undefined ? { role: data.role as PrismaRole } : {}),
         ...(data.active !== undefined ? { active: data.active } : {}),
         ...(data.tokenVersion !== undefined ? { tokenVersion: data.tokenVersion } : {}),
+        ...(data.emailOnTicketUpdated !== undefined
+          ? { emailOnTicketUpdated: data.emailOnTicketUpdated }
+          : {}),
+        ...(data.emailOnTicketClosed !== undefined
+          ? { emailOnTicketClosed: data.emailOnTicketClosed }
+          : {}),
       },
     });
 

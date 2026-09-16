@@ -83,3 +83,65 @@ describe('GET /users/agents', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('PATCH /users/me/notification-preferences', () => {
+  it('atualiza só a preferência de atualização de ticket, mantendo a de fechamento', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({ emailOnTicketUpdated: false });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ emailOnTicketUpdated: false, emailOnTicketClosed: true });
+
+    const meResponse = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meResponse.body.emailOnTicketUpdated).toBe(false);
+    expect(meResponse.body.emailOnTicketClosed).toBe(true);
+  });
+
+  it('atualiza só a preferência de fechamento, mantendo a de atualização', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({ emailOnTicketClosed: false });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ emailOnTicketUpdated: true, emailOnTicketClosed: false });
+  });
+
+  it('rejeita payload inválido', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({ emailOnTicketUpdated: 'yes' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejeita payload vazio', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it('requisição sem token recebe 401', async () => {
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .send({ emailOnTicketUpdated: false });
+
+    expect(response.status).toBe(401);
+  });
+});

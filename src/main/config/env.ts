@@ -21,4 +21,9 @@ export const env = {
   // Chave (32 bytes em base64) pra cifrar client secrets de OAuth salvos no
   // banco (ver infrastructure/crypto/secret-cipher.ts).
   settingsEncryptionKey: process.env.SETTINGS_ENCRYPTION_KEY ?? '',
+  // E-mail transacional via Resend (ver infrastructure/email). Sem chave, o
+  // app usa um EmailSender nulo — só loga, não falha nem envia nada de
+  // verdade (ver infrastructure/email/make-email-sender.ts).
+  resendApiKey: process.env.RESEND_API_KEY ?? '',
+  emailFrom: process.env.EMAIL_FROM ?? 'Hubdesk <onboarding@resend.dev>',
 };

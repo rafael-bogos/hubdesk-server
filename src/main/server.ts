@@ -14,6 +14,7 @@ import { TICKET_CLOSURE_QUEUE, TicketClosureJobData } from '../infrastructure/qu
 import { createTicketClosureWorker } from '../infrastructure/queue/ticket-closure-worker';
 import { createSocketServer } from '../infrastructure/realtime/socket-server';
 import { SocketIoRealtimeNotifier } from '../infrastructure/realtime/socket-io-realtime-notifier';
+import { makeEmailSender } from '../infrastructure/email/make-email-sender';
 import { TicketNotificationService } from '../application/services/ticket-notification-service';
 
 // `io` é criado sem servidor HTTP ainda (só pra já existir e poder ser
@@ -47,6 +48,7 @@ const ticketClosureWorker = createTicketClosureWorker(
     new PrismaUserRepository(prisma),
     new PrismaNotificationRepository(prisma),
     new SocketIoRealtimeNotifier(io),
+    makeEmailSender(),
   ),
 );
 

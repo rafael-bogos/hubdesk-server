@@ -21,6 +21,7 @@ import { PrismaCommentRepository } from '../../infrastructure/database/repositor
 import { PrismaNotificationRepository } from '../../infrastructure/database/repositories/prisma-notification-repository';
 import { PrismaTicketRepository } from '../../infrastructure/database/repositories/prisma-ticket-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
+import { makeEmailSender } from '../../infrastructure/email/make-email-sender';
 import { TicketController } from '../../infrastructure/http/express/controllers/ticket-controller';
 import { makeTicketRouter } from '../../infrastructure/http/express/routes/ticket-routes';
 import { NullRealtimeNotifier } from '../../infrastructure/realtime/null-realtime-notifier';
@@ -46,6 +47,7 @@ export const makeTicketModule = (
     userRepository,
     notificationRepository,
     realtimeNotifier,
+    makeEmailSender(),
   );
 
   const createTicketUseCase = new CreateTicketUseCase(ticketRepository, ticketNotificationService);

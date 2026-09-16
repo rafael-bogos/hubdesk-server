@@ -8,6 +8,8 @@ export interface User {
   role: Role;
   tokenVersion: number;
   active: boolean;
+  emailOnTicketUpdated: boolean;
+  emailOnTicketClosed: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,4 +1,5 @@
 import { Ticket, TicketPriority, TicketStatus } from '../../domain/entities/ticket.entity';
+import { EmailSender } from '../../domain/ports/email-sender';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
 import { CreateNotificationData, NotificationRepository } from '../../domain/repositories/notification-repository';
 import { UserRepository } from '../../domain/repositories/user-repository';
@@ -8,7 +9,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   IN_PROGRESS: 'Em andamento',
   WAITING: 'Aguardando',
   PENDING_CLOSURE: 'Pendente de fechamento',
-  RESOLVED: 'Resolvido',
+  RESOLVED: 'Fechado',
 };
 
 const PRIORITY_LABELS: Record<TicketPriority, string> = {
@@ -33,6 +34,7 @@ export class TicketNotificationService {
     private readonly userRepository: UserRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly realtimeNotifier: RealtimeNotifier,
+    private readonly emailSender: EmailSender,
   ) {}
 
   async notifyTicketCreated(ticket: Ticket): Promise<void> {
@@ -71,6 +73,14 @@ export class TicketNotificationService {
       ticketId: ticket.id,
       ticketNumber: ticket.number,
     });
+
+    // Fechamento é sempre uma mudança de status pra RESOLVED — mesmo evento
+    // que qualquer outra troca de status pro resto do sistema (mesmo `type`
+    // de notificação in-app), mas com preferência de e-mail própria: quem não
+    // quer ser avisado de toda atualização ainda pode querer saber quando o
+    // chamado fecha.
+    const isClosed = changeTypes.includes('status') && ticket.status === 'RESOLVED';
+    await this.sendUpdateEmails([...recipientIds], ticket, detail, isClosed);
   }
 
   // Mensagem nova (comentário/anexo) não vira notificação persistida — seria
@@ -93,6 +103,31 @@ export class TicketNotificationService {
       userIds.map(async (userId) => {
         const notification = await this.notificationRepository.create({ ...data, userId });
         this.realtimeNotifier.pushNotification(notification);
+      }),
+    );
+  }
+
+  // Um e-mail por destinatário elegível (preferência ligada) — nunca por quem
+  // fez a mudança, já removido de `userIds` por quem chama.
+  private async sendUpdateEmails(
+    userIds: string[],
+    ticket: Ticket,
+    detail: string,
+    isClosed: boolean,
+  ): Promise<void> {
+    await Promise.all(
+      userIds.map(async (userId) => {
+        const user = await this.userRepository.findById(userId);
+        if (!user) return;
+
+        const enabled = isClosed ? user.emailOnTicketClosed : user.emailOnTicketUpdated;
+        if (!enabled) return;
+
+        await this.emailSender.send({
+          to: user.email,
+          subject: isClosed ? `Chamado #${ticket.number} fechado` : `Chamado #${ticket.number} atualizado`,
+          html: `<p><strong>${ticket.title}</strong></p><p>${detail}</p>`,
+        });
       }),
     );
   }

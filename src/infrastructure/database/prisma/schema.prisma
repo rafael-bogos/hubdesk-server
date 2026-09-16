@@ -35,6 +35,12 @@ model User {
   emailVerified Boolean @default(false) @map("email_verified")
   image         String?
 
+  // Preferências de e-mail, independentes uma da outra — quem não quer ser
+  // avisado a cada atualização ainda pode querer saber quando o chamado
+  // fecha, por exemplo.
+  emailOnTicketUpdated Boolean @default(true) @map("email_on_ticket_updated")
+  emailOnTicketClosed  Boolean @default(true) @map("email_on_ticket_closed")
+
   ticketsRequested   Ticket[]         @relation("TicketRequester")
   ticketAssignments  TicketAssignee[]
   comments           Comment[]
