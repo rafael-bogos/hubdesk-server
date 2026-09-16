@@ -27,8 +27,16 @@ export class GetLoginSettingsUseCase {
       customOAuthTokenUrl: settings.customOAuthTokenUrl,
       customOAuthUserInfoUrl: settings.customOAuthUserInfoUrl,
       customOAuthScopes: settings.customOAuthScopes,
+      customOAuthIssuer: settings.customOAuthIssuer,
+      customOAuthJwksUrl: settings.customOAuthJwksUrl,
       customOAuthCallbackUrl: settings.customOAuthProviderId
         ? `${env.backendPublicUrl}${BETTER_AUTH_BASE_PATH}/callback/${settings.customOAuthProviderId}`
+        : null,
+      // URL fixa (não muda por provider id) — o admin registra ela no
+      // provedor customizado como `backchannelLogoutUri`. Só faz sentido
+      // mostrar quando existe um provedor customizado configurado.
+      customOAuthBackchannelLogoutUrl: settings.customOAuthProviderId
+        ? `${env.backendPublicUrl}/auth/oauth/backchannel-logout`
         : null,
       customOAuthLogoUrl: buildLoginLogoUrl(settings),
 

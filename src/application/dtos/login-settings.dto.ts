@@ -19,7 +19,12 @@ export interface AdminLoginSettingsOutput {
   customOAuthTokenUrl: string | null;
   customOAuthUserInfoUrl: string | null;
   customOAuthScopes: string | null;
+  customOAuthIssuer: string | null;
+  customOAuthJwksUrl: string | null;
   customOAuthCallbackUrl: string | null;
+  // URL fixa (não depende de credenciais) pra registrar no provedor como
+  // `backchannelLogoutUri` — null enquanto nenhum provider id foi salvo.
+  customOAuthBackchannelLogoutUrl: string | null;
   // Aponta pro endpoint público que serve a imagem (com cache-busting) —
   // null enquanto nenhuma logo foi enviada, aí o botão usa um ícone genérico.
   customOAuthLogoUrl: string | null;
@@ -48,5 +53,7 @@ export interface UpdateLoginSettingsInput {
   customOAuthTokenUrl?: string;
   customOAuthUserInfoUrl?: string;
   customOAuthScopes?: string;
+  customOAuthIssuer?: string;
+  customOAuthJwksUrl?: string;
   defaultMethod?: DefaultLoginMethod;
 }

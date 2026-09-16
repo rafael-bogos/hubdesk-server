@@ -19,6 +19,8 @@ export const updateLoginSettingsSchema = z.object({
   customOAuthTokenUrl: z.string().url().optional(),
   customOAuthUserInfoUrl: z.string().url().optional(),
   customOAuthScopes: z.string().optional(),
+  customOAuthIssuer: z.string().min(1).optional(),
+  customOAuthJwksUrl: z.string().url().optional(),
 
   defaultMethod: z.enum(['google', 'custom', 'email']).optional(),
 });

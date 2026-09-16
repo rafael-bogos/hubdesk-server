@@ -3,6 +3,7 @@ import { CompleteOAuthUseCase } from '../../../../application/use-cases/auth/com
 import { ExchangeOAuthCodeUseCase } from '../../../../application/use-cases/auth/exchange-oauth-code.use-case';
 import { GetLoginLogoUseCase } from '../../../../application/use-cases/auth/get-login-logo.use-case';
 import { GetLoginMethodsUseCase } from '../../../../application/use-cases/auth/get-login-methods.use-case';
+import { HandleBackchannelLogoutUseCase } from '../../../../application/use-cases/auth/handle-backchannel-logout.use-case';
 import { StartOAuthUseCase } from '../../../../application/use-cases/auth/start-oauth.use-case';
 import { AppError } from '../../../../domain/errors/app-error';
 
@@ -26,6 +27,7 @@ export class OAuthController {
     private readonly completeOAuthUseCase: CompleteOAuthUseCase,
     private readonly exchangeOAuthCodeUseCase: ExchangeOAuthCodeUseCase,
     private readonly getLoginLogoUseCase: GetLoginLogoUseCase,
+    private readonly handleBackchannelLogoutUseCase: HandleBackchannelLogoutUseCase,
   ) {}
 
   loginMethods = async (_req: Request, res: Response, next: NextFunction) => {
@@ -91,6 +93,19 @@ export class OAuthController {
     try {
       const result = await this.exchangeOAuthCodeUseCase.execute(req.body);
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // Chamado pelo PROVEDOR (não pelo navegador) — assíncrono, sem sessão/JWT
+  // nosso no meio. Corpo é `application/x-www-form-urlencoded` (ver
+  // oauth-routes.ts, que aplica express.urlencoded() só nessa rota).
+  backchannelLogout = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const logoutToken = typeof req.body?.logout_token === 'string' ? req.body.logout_token : undefined;
+      await this.handleBackchannelLogoutUseCase.execute(logoutToken);
+      res.status(200).end();
     } catch (err) {
       next(err);
     }

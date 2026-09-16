@@ -115,6 +115,12 @@ model LoginSettings {
   customOAuthTokenUrl               String?  @map("custom_oauth_token_url")
   customOAuthUserInfoUrl            String?  @map("custom_oauth_user_info_url")
   customOAuthScopes                 String?  @map("custom_oauth_scopes")
+  // Usados só pra verificar a assinatura de um `logout_token` de back-channel
+  // logout (ver application/use-cases/auth/handle-backchannel-logout.use-case.ts)
+  // — opcionais: sem eles, o back-channel logout desse provedor simplesmente
+  // não valida nada (login/logout normal continuam funcionando de qualquer jeito).
+  customOAuthIssuer                 String?  @map("custom_oauth_issuer")
+  customOAuthJwksUrl                String?  @map("custom_oauth_jwks_url")
   // Logo do botão do OAuth customizado (Google já tem o ícone padrão dele
   // embutido) — path no FileStorage, igual aos anexos de chamado. Sem logo
   // enviada, a tela de login cai num ícone genérico.

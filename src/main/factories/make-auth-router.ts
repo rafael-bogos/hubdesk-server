@@ -6,6 +6,7 @@ import { CompleteOAuthUseCase } from '../../application/use-cases/auth/complete-
 import { ExchangeOAuthCodeUseCase } from '../../application/use-cases/auth/exchange-oauth-code.use-case';
 import { GetLoginLogoUseCase } from '../../application/use-cases/auth/get-login-logo.use-case';
 import { GetLoginMethodsUseCase } from '../../application/use-cases/auth/get-login-methods.use-case';
+import { HandleBackchannelLogoutUseCase } from '../../application/use-cases/auth/handle-backchannel-logout.use-case';
 import { LoginUserUseCase } from '../../application/use-cases/auth/login-user.use-case';
 import { LogoutUserUseCase } from '../../application/use-cases/auth/logout-user.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/auth/refresh-token.use-case';
@@ -15,6 +16,7 @@ import { BcryptPasswordHasher } from '../../infrastructure/auth/bcrypt-password-
 import { BetterAuthProvider } from '../../infrastructure/auth/better-auth-instance';
 import { JwtTokenService } from '../../infrastructure/auth/jwt-token-service';
 import { PrismaLoginSettingsRepository } from '../../infrastructure/database/repositories/prisma-login-settings-repository';
+import { PrismaOAuthAccountRepository } from '../../infrastructure/database/repositories/prisma-oauth-account-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
 import { AuthController } from '../../infrastructure/http/express/controllers/auth-controller';
 import { OAuthController } from '../../infrastructure/http/express/controllers/oauth-controller';
@@ -72,12 +74,19 @@ export const makeAuthModule = (prisma: PrismaClient, betterAuthProvider: BetterA
   const completeOAuthUseCase = new CompleteOAuthUseCase(betterAuthProvider, oauthRedis);
   const exchangeOAuthCodeUseCase = new ExchangeOAuthCodeUseCase(oauthRedis, userRepository, tokenService);
   const getLoginLogoUseCase = new GetLoginLogoUseCase(loginSettingsRepository, fileStorage);
+  const oauthAccountRepository = new PrismaOAuthAccountRepository(prisma);
+  const handleBackchannelLogoutUseCase = new HandleBackchannelLogoutUseCase(
+    loginSettingsRepository,
+    oauthAccountRepository,
+    userRepository,
+  );
   const oauthController = new OAuthController(
     getLoginMethodsUseCase,
     startOAuthUseCase,
     completeOAuthUseCase,
     exchangeOAuthCodeUseCase,
     getLoginLogoUseCase,
+    handleBackchannelLogoutUseCase,
   );
 
   const router = Router();

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { OAuthController } from '../controllers/oauth-controller';
 import { validate } from '../middleware/validate';
 import { exchangeOAuthCodeSchema } from '../schemas/oauth.schemas';
@@ -6,8 +6,9 @@ import { exchangeOAuthCodeSchema } from '../schemas/oauth.schemas';
 // Ponte entre a sessão do better-auth (login via Google / OAuth customizado)
 // e o nosso próprio JWT — ver comentário em better-auth-instance.ts. Nenhuma
 // rota aqui usa `authenticate`: ou é pública (login-methods, start, complete
-// — chamadas antes do usuário ter qualquer JWT), ou é uma troca
-// server-to-server que se autentica pelo código de handoff em si (exchange).
+// — chamadas antes do usuário ter qualquer JWT), ou se autentica de outro
+// jeito (exchange, pelo código de handoff; backchannel-logout, verificando a
+// assinatura do próprio logout_token contra o provedor).
 export const makeOAuthRouter = (oauthController: OAuthController) => {
   const router = Router();
 
@@ -16,6 +17,14 @@ export const makeOAuthRouter = (oauthController: OAuthController) => {
   router.get('/auth/oauth/start', oauthController.start);
   router.get('/auth/oauth/complete', oauthController.complete);
   router.post('/auth/oauth/exchange', validate(exchangeOAuthCodeSchema), oauthController.exchange);
+  // Corpo é `application/x-www-form-urlencoded` (spec de back-channel
+  // logout, não JSON) — o express.json() global em app.ts não parseia isso,
+  // por isso o urlencoded() só aqui.
+  router.post(
+    '/auth/oauth/backchannel-logout',
+    express.urlencoded({ extended: false }),
+    oauthController.backchannelLogout,
+  );
 
   return router;
 };

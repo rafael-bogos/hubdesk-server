@@ -34,6 +34,8 @@ export class UpdateLoginSettingsUseCase {
       ...(input.customOAuthTokenUrl !== undefined && { customOAuthTokenUrl: input.customOAuthTokenUrl }),
       ...(input.customOAuthUserInfoUrl !== undefined && { customOAuthUserInfoUrl: input.customOAuthUserInfoUrl }),
       ...(input.customOAuthScopes !== undefined && { customOAuthScopes: input.customOAuthScopes }),
+      ...(input.customOAuthIssuer !== undefined && { customOAuthIssuer: input.customOAuthIssuer }),
+      ...(input.customOAuthJwksUrl !== undefined && { customOAuthJwksUrl: input.customOAuthJwksUrl }),
       ...(input.defaultMethod !== undefined && { defaultMethod: input.defaultMethod }),
       // Secret novo substitui; ausente/vazio mantém o já cifrado no banco.
       googleClientSecretEncrypted: input.googleClientSecret

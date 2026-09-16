@@ -21,6 +21,8 @@ const toDomain = (row: PrismaLoginSettings): LoginSettings => ({
   customOAuthTokenUrl: row.customOAuthTokenUrl,
   customOAuthUserInfoUrl: row.customOAuthUserInfoUrl,
   customOAuthScopes: row.customOAuthScopes,
+  customOAuthIssuer: row.customOAuthIssuer,
+  customOAuthJwksUrl: row.customOAuthJwksUrl,
   customOAuthLogoPath: row.customOAuthLogoPath,
   customOAuthLogoMimeType: row.customOAuthLogoMimeType,
   defaultMethod: row.defaultMethod as DefaultLoginMethod,
