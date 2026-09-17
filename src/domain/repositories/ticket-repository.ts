@@ -24,6 +24,11 @@ export interface ListTicketsFilters {
   // Restringe a chamados sem responsável ou atribuídos a este id — usado
   // pra agentes não verem a fila de outros atendentes.
   visibleToAgentId?: string;
+  // Só relevante junto com `visibleToAgentId`: quando o agente é restrito a
+  // categorias específicas, limita a perna "sem responsável" do filtro
+  // acima a essas categorias (chamados já atribuídos a ele continuam
+  // aparecendo independente da categoria). null/ausente = sem restrição.
+  visibleToAgentCategoryIds?: string[] | null;
   // Filtro explícito por responsável (ex: admin filtrando a fila de um
   // atendente específico) — diferente de visibleToAgentId, que também inclui
   // chamados sem responsável.

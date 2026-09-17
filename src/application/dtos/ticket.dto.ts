@@ -4,6 +4,11 @@ import { TicketPriority, TicketStatus } from '../../domain/entities/ticket.entit
 export interface Actor {
   userId: string;
   role: Role;
+  // Só populado pra AGENT (ver TicketController.actor). null/ausente = sem
+  // restrição de categoria, vê tudo (comportamento padrão) — array presente
+  // = só pode ver/pegar chamado sem responsável dessas categorias (ver
+  // canViewTicket em ticket-access.ts).
+  allowedCategoryIds?: string[] | null;
 }
 
 export interface CreateTicketInput {

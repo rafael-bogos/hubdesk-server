@@ -66,11 +66,15 @@ export class PrismaTicketRepository implements TicketRepository {
     const andConditions: Prisma.TicketWhereInput[] = [];
 
     if (filters.visibleToAgentId) {
+      // Agente restrito a categorias: a perna "sem responsável" só inclui as
+      // categorias permitidas — a perna "já atribuído a mim" nunca é
+      // restringida por categoria (uma vez atribuído, continua vendo).
+      const unassignedCondition: Prisma.TicketWhereInput = filters.visibleToAgentCategoryIds
+        ? { assignees: { none: {} }, categoryId: { in: filters.visibleToAgentCategoryIds } }
+        : { assignees: { none: {} } };
+
       andConditions.push({
-        OR: [
-          { assignees: { none: {} } },
-          { assignees: { some: { userId: filters.visibleToAgentId } } },
-        ],
+        OR: [unassignedCondition, { assignees: { some: { userId: filters.visibleToAgentId } } }],
       });
     }
 

@@ -50,6 +50,7 @@ model User {
   notifications      Notification[]
   accounts           Account[]
   sessions           Session[]
+  agentCategories    AgentCategory[]
 
   @@map("users")
 }
@@ -183,9 +184,28 @@ model Category {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tickets Ticket[]
+  tickets         Ticket[]
+  agentCategories AgentCategory[]
 
   @@map("categories")
+}
+
+// Restringe certos atendentes (role AGENT) a categorias específicas — vê e
+// pode se auto-atribuir só a chamados sem responsável dessas categorias
+// (editado pelo admin em /admin/users). Sem nenhuma linha aqui, o atendente
+// não tem restrição nenhuma (comportamento padrão, retrocompatível) — ver
+// `canViewTicket` em application/use-cases/tickets/ticket-access.ts.
+model AgentCategory {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, categoryId])
+  @@map("agent_categories")
 }
 
 model Ticket {

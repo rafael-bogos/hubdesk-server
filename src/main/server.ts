@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { logger } from '../infrastructure/logging/logger';
 import { JwtTokenService } from '../infrastructure/auth/jwt-token-service';
 import { prisma } from '../infrastructure/database/prisma/client';
+import { PrismaAgentCategoryRepository } from '../infrastructure/database/repositories/prisma-agent-category-repository';
 import { PrismaNotificationRepository } from '../infrastructure/database/repositories/prisma-notification-repository';
 import { PrismaSlaSettingsRepository } from '../infrastructure/database/repositories/prisma-sla-settings-repository';
 import { PrismaTicketRepository } from '../infrastructure/database/repositories/prisma-ticket-repository';
@@ -52,6 +53,7 @@ const ticketClosureWorker = createTicketClosureWorker(
     new PrismaNotificationRepository(prisma),
     new SocketIoRealtimeNotifier(io),
     makeEmailSender(),
+    new PrismaAgentCategoryRepository(prisma),
   ),
 );
 
@@ -74,6 +76,7 @@ const slaScanWorker = createSlaScanWorker(
     new PrismaNotificationRepository(prisma),
     new SocketIoRealtimeNotifier(io),
     makeEmailSender(),
+    new PrismaAgentCategoryRepository(prisma),
   ),
 );
 

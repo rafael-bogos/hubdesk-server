@@ -19,6 +19,10 @@ export interface UpdateUserInput {
   email?: string;
   role?: Role;
   active?: boolean;
+  // Restringe (role AGENT) a essas categorias — vê/pode se auto-atribuir só
+  // a chamados sem responsável delas. Ausente = não mexe; [] = remove toda
+  // restrição (agente passa a ver tudo de novo).
+  categoryIds?: string[];
 }
 
 export interface CreateCategoryInput {

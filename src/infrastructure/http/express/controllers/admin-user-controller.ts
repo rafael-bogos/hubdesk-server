@@ -6,7 +6,7 @@ import { UpdateUserUseCase } from '../../../../application/use-cases/admin/users
 import { User } from '../../../../domain/entities/user.entity';
 import { UnauthorizedError } from '../../../../domain/errors/auth-errors';
 
-const toSafeOutput = (user: User) => ({
+const toSafeOutput = (user: User, categoryIds: string[] = []) => ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -14,6 +14,7 @@ const toSafeOutput = (user: User) => ({
   active: user.active,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
+  categoryIds,
 });
 
 export class AdminUserController {
@@ -34,7 +35,10 @@ export class AdminUserController {
   list = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.listUsersUseCase.execute(req.query);
-      res.status(200).json({ ...result, items: result.items.map(toSafeOutput) });
+      res.status(200).json({
+        ...result,
+        items: result.items.map(({ user, categoryIds }) => toSafeOutput(user, categoryIds)),
+      });
     } catch (err) {
       next(err);
     }
@@ -52,8 +56,8 @@ export class AdminUserController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const user = await this.updateUserUseCase.execute(id, req.body, this.actorId(req));
-      res.status(200).json(toSafeOutput(user));
+      const { user, categoryIds } = await this.updateUserUseCase.execute(id, req.body, this.actorId(req));
+      res.status(200).json(toSafeOutput(user, categoryIds));
     } catch (err) {
       next(err);
     }

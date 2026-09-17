@@ -12,9 +12,24 @@ export const canViewTicket = (actor: Actor, ticket: Ticket): boolean => {
     return ticket.requesterId === actor.userId;
   }
 
-  // AGENT: enxerga chamados ainda sem responsável (pra poder se atribuir) e
-  // os que já são dele, mas não os atribuídos a outro atendente.
-  return ticket.assigneeIds.length === 0 || ticket.assigneeIds.includes(actor.userId);
+  // AGENT: já é responsável — sempre vê, categoria não importa mais.
+  if (ticket.assigneeIds.includes(actor.userId)) {
+    return true;
+  }
+
+  // Atribuído a outro atendente — nunca vê.
+  if (ticket.assigneeIds.length > 0) {
+    return false;
+  }
+
+  // Sem responsável: agente sem restrição de categoria enxerga tudo (pra
+  // poder se atribuir); um agente restrito só enxerga chamado das categorias
+  // permitidas — sem categoria definida fica de fora mesmo pra ele.
+  if (!actor.allowedCategoryIds) {
+    return true;
+  }
+
+  return ticket.categoryId !== null && actor.allowedCategoryIds.includes(ticket.categoryId);
 };
 
 export const assertCanViewTicket = (actor: Actor, ticket: Ticket): void => {

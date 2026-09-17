@@ -14,6 +14,7 @@ import { UpdateTicketStatusUseCase } from '../../application/use-cases/tickets/u
 import { TicketNotificationService } from '../../application/services/ticket-notification-service';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
 import { TicketClosureScheduler } from '../../domain/ports/ticket-closure-scheduler';
+import { PrismaAgentCategoryRepository } from '../../infrastructure/database/repositories/prisma-agent-category-repository';
 import { PrismaAttachmentRepository } from '../../infrastructure/database/repositories/prisma-attachment-repository';
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaCommentRepository } from '../../infrastructure/database/repositories/prisma-comment-repository';
@@ -41,6 +42,7 @@ export const makeTicketModule = (
   const categoryRepository = new PrismaCategoryRepository(prisma);
   const notificationRepository = new PrismaNotificationRepository(prisma);
   const slaSettingsRepository = new PrismaSlaSettingsRepository(prisma);
+  const agentCategoryRepository = new PrismaAgentCategoryRepository(prisma);
   const fileStorage = makeFileStorage();
 
   const ticketNotificationService = new TicketNotificationService(
@@ -48,6 +50,7 @@ export const makeTicketModule = (
     notificationRepository,
     realtimeNotifier,
     makeEmailSender(),
+    agentCategoryRepository,
   );
 
   const createTicketUseCase = new CreateTicketUseCase(ticketRepository, ticketNotificationService);
@@ -100,6 +103,7 @@ export const makeTicketModule = (
     addAttachmentUseCase,
     updateAttachmentInternalUseCase,
     downloadAttachmentUseCase,
+    agentCategoryRepository,
   );
 
   return {

@@ -1,6 +1,7 @@
 import { Ticket, TicketPriority, TicketStatus } from '../../domain/entities/ticket.entity';
 import { EmailSender } from '../../domain/ports/email-sender';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
+import { AgentCategoryRepository } from '../../domain/repositories/agent-category-repository';
 import { CreateNotificationData, NotificationRepository } from '../../domain/repositories/notification-repository';
 import { UserRepository } from '../../domain/repositories/user-repository';
 import { env } from '../../main/config/env';
@@ -37,14 +38,31 @@ export class TicketNotificationService {
     private readonly notificationRepository: NotificationRepository,
     private readonly realtimeNotifier: RealtimeNotifier,
     private readonly emailSender: EmailSender,
+    private readonly agentCategoryRepository: AgentCategoryRepository,
   ) {}
 
   async notifyTicketCreated(ticket: Ticket): Promise<void> {
     // Chamado recém-criado nunca tem responsável ainda — visível a todo
-    // agent/admin.
-    const staffIds = await this.staffIds();
+    // admin, e a todo agent que não esteja restrito a outras categorias (ver
+    // filterAgentIdsByCategory — mesma regra de canViewTicket).
+    const { items: admins } = await this.userRepository.list({
+      role: 'ADMIN',
+      active: true,
+      page: 1,
+      pageSize: MAX_STAFF,
+    });
+    const { items: agents } = await this.userRepository.list({
+      role: 'AGENT',
+      active: true,
+      page: 1,
+      pageSize: MAX_STAFF,
+    });
+    const visibleAgentIds = await this.filterAgentIdsByCategory(
+      agents.map((agent) => agent.id),
+      ticket.categoryId,
+    );
 
-    await this.dispatch(staffIds, {
+    await this.dispatch([...admins.map((admin) => admin.id), ...visibleAgentIds], {
       type: 'TICKET_CREATED',
       title: `Novo chamado #${ticket.number}`,
       body: ticket.title,
@@ -193,23 +211,35 @@ export class TicketNotificationService {
     );
   }
 
-  private async staffIds(): Promise<string[]> {
-    const { items } = await this.userRepository.list({
-      role: ['AGENT', 'ADMIN'],
-      active: true,
-      page: 1,
-      pageSize: MAX_STAFF,
+  // Mesma regra de canViewTicket pra chamado sem responsável: agent sem
+  // restrição (sem nenhuma linha em AgentCategory) vê tudo; agent restrito só
+  // vê chamado das categorias permitidas, e nunca um sem categoria definida.
+  // Sem isso, um agent restrito seria notificado (in-app + e-mail) de
+  // chamados que nem consegue abrir (a página dá 404 pra ele).
+  private async filterAgentIdsByCategory(agentIds: string[], categoryId: string | null): Promise<string[]> {
+    if (agentIds.length === 0) {
+      return [];
+    }
+
+    const allowedCategoryIdsByAgent = await this.agentCategoryRepository.listCategoryIdsForUsers(agentIds);
+
+    return agentIds.filter((agentId) => {
+      const allowedCategoryIds = allowedCategoryIdsByAgent.get(agentId);
+      if (!allowedCategoryIds || allowedCategoryIds.length === 0) {
+        return true;
+      }
+      return categoryId !== null && allowedCategoryIds.includes(categoryId);
     });
-    return items.map((user) => user.id);
   }
 
   // Quem deve saber que esse chamado mudou = quem consegue vê-lo, pelas
   // mesmas regras de ticket-access.ts (canViewTicket): solicitante, admins e
-  // — só enquanto sem responsável, quando qualquer agent pode se atribuir a
-  // qualquer momento — todo agent; depois de atribuído, só quem está
-  // atribuído. Depende exclusivamente do estado atual de `assigneeIds`, nunca
-  // do tipo de mudança — do contrário, atribuir um chamado a alguém notifica
-  // agents sem nenhuma relação com ele (e que, atribuído, nem enxergam mais).
+  // — só enquanto sem responsável — todo agent que não esteja restrito a
+  // outra categoria (ver filterAgentIdsByCategory); depois de atribuído, só
+  // quem está atribuído. Depende exclusivamente do estado atual de
+  // `assigneeIds`, nunca do tipo de mudança — do contrário, atribuir um
+  // chamado a alguém notifica agents sem nenhuma relação com ele (e que,
+  // atribuído, nem enxergam mais).
   private async updateRecipientIds(ticket: Ticket): Promise<Set<string>> {
     const ids = new Set<string>([ticket.requesterId]);
 
@@ -228,7 +258,11 @@ export class TicketNotificationService {
         page: 1,
         pageSize: MAX_STAFF,
       });
-      agents.forEach((agent) => ids.add(agent.id));
+      const visibleAgentIds = await this.filterAgentIdsByCategory(
+        agents.map((agent) => agent.id),
+        ticket.categoryId,
+      );
+      visibleAgentIds.forEach((id) => ids.add(id));
     } else {
       ticket.assigneeIds.forEach((id) => ids.add(id));
     }

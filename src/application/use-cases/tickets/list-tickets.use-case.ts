@@ -41,6 +41,7 @@ export class ListTicketsUseCase {
       search: input.search?.trim() || undefined,
       requesterId: actor.role === 'CUSTOMER' ? actor.userId : undefined,
       visibleToAgentId: actor.role === 'AGENT' ? actor.userId : undefined,
+      visibleToAgentCategoryIds: actor.role === 'AGENT' ? (actor.allowedCategoryIds ?? null) : undefined,
       page,
       pageSize,
     });

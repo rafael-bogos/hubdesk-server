@@ -27,6 +27,7 @@ export const updateUserSchema = z
     email: z.string().email('E-mail inválido').optional(),
     role: roleEnum.optional(),
     active: z.boolean().optional(),
+    categoryIds: z.array(z.string()).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Nenhum campo para atualizar foi enviado' });
 

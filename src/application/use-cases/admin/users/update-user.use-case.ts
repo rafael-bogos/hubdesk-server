@@ -1,16 +1,23 @@
 import { User } from '../../../../domain/entities/user.entity';
 import { EmailAlreadyInUseError, UserNotFoundError } from '../../../../domain/errors/auth-errors';
 import { AuditLogger } from '../../../../domain/ports/audit-logger';
+import { AgentCategoryRepository } from '../../../../domain/repositories/agent-category-repository';
 import { UserRepository } from '../../../../domain/repositories/user-repository';
 import { UpdateUserInput } from '../../../dtos/admin.dto';
+
+export interface UpdateUserOutput {
+  user: User;
+  categoryIds: string[];
+}
 
 export class UpdateUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly auditLogger: AuditLogger,
+    private readonly agentCategoryRepository: AgentCategoryRepository,
   ) {}
 
-  async execute(id: string, input: UpdateUserInput, actorId: string): Promise<User> {
+  async execute(id: string, input: UpdateUserInput, actorId: string): Promise<UpdateUserOutput> {
     const existingUser = await this.userRepository.findById(id);
 
     if (!existingUser) {
@@ -41,6 +48,10 @@ export class UpdateUserUseCase {
       user = await this.userRepository.incrementTokenVersion(id);
     }
 
+    if (input.categoryIds !== undefined) {
+      await this.agentCategoryRepository.setCategoriesForUser(id, input.categoryIds);
+    }
+
     await this.auditLogger.record({
       actorId,
       action: accessChanged ? 'UPDATE_USER_ACCESS' : 'UPDATE_USER',
@@ -49,6 +60,8 @@ export class UpdateUserUseCase {
       metadata: { role: user.role, active: user.active },
     });
 
-    return user;
+    const categoryIds = await this.agentCategoryRepository.listCategoryIdsForUser(id);
+
+    return { user, categoryIds };
   }
 }

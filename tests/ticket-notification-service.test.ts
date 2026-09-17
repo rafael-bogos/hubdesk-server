@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TicketNotificationService } from '../src/application/services/ticket-notification-service';
 import { Ticket } from '../src/domain/entities/ticket.entity';
 import { User } from '../src/domain/entities/user.entity';
+import { AgentCategoryRepository } from '../src/domain/repositories/agent-category-repository';
 import { EmailSender, SendEmailInput } from '../src/domain/ports/email-sender';
 import { RealtimeNotifier } from '../src/domain/ports/realtime-notifier';
 import {
@@ -114,6 +115,31 @@ class FakeEmailSender implements EmailSender {
   }
 }
 
+// Vazio (padrão) = nenhum agent restrito, comportamento de antes da feature
+// de restrição por categoria.
+class FakeAgentCategoryRepository implements AgentCategoryRepository {
+  constructor(private readonly categoriesByUser: Map<string, string[]> = new Map()) {}
+
+  async listCategoryIdsForUser(userId: string): Promise<string[]> {
+    return this.categoriesByUser.get(userId) ?? [];
+  }
+
+  async setCategoriesForUser(userId: string, categoryIds: string[]): Promise<void> {
+    this.categoriesByUser.set(userId, categoryIds);
+  }
+
+  async listCategoryIdsForUsers(userIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    for (const userId of userIds) {
+      const categoryIds = this.categoriesByUser.get(userId);
+      if (categoryIds) {
+        result.set(userId, categoryIds);
+      }
+    }
+    return result;
+  }
+}
+
 describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
   it('não manda e-mail de atualização pra quem desligou a preferência, mas cria a notificação in-app', async () => {
     const requester = baseUser({
@@ -129,6 +155,7 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
       notificationRepository,
       new FakeRealtimeNotifier(),
       emailSender,
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'requester-1', status: 'IN_PROGRESS' });
@@ -147,6 +174,7 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
       new FakeNotificationRepository(),
       new FakeRealtimeNotifier(),
       emailSender,
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'requester-1', status: 'IN_PROGRESS' });
@@ -168,6 +196,7 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
       new FakeNotificationRepository(),
       new FakeRealtimeNotifier(),
       emailSender,
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'admin-1', status: 'IN_PROGRESS' });
@@ -190,6 +219,7 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
       new FakeNotificationRepository(),
       new FakeRealtimeNotifier(),
       emailSender,
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'requester-1', status: 'RESOLVED' });
@@ -215,6 +245,7 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
       new FakeNotificationRepository(),
       new FakeRealtimeNotifier(),
       emailSender,
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'requester-1', status: 'RESOLVED' });
@@ -236,6 +267,7 @@ describe('TicketNotificationService.notifyTicketUpdated — escopo dos destinat�
       notificationRepository,
       new FakeRealtimeNotifier(),
       new FakeEmailSender(),
+      new FakeAgentCategoryRepository(),
     );
 
     // Ticket já vem com o novo responsável (a atribuição já foi persistida
@@ -259,6 +291,7 @@ describe('TicketNotificationService.notifyTicketUpdated — escopo dos destinat�
       notificationRepository,
       new FakeRealtimeNotifier(),
       new FakeEmailSender(),
+      new FakeAgentCategoryRepository(),
     );
 
     const ticket = baseTicket({ requesterId: 'requester-1', assigneeIds: [], priority: 'HIGH' });
@@ -266,5 +299,104 @@ describe('TicketNotificationService.notifyTicketUpdated — escopo dos destinat�
 
     const notifiedIds = notificationRepository.created.map((n) => n.userId);
     expect(notifiedIds).toEqual(expect.arrayContaining(['agent-a', 'agent-b']));
+  });
+
+  it('chamado sem responsável de categoria fora da permitida não notifica o agent restrito a outra categoria', async () => {
+    const requester = baseUser({ id: 'requester-1', email: 'requester@example.com', role: 'CUSTOMER' });
+    const restrictedAgent = baseUser({ id: 'agent-restricted', email: 'restricted@example.com', role: 'AGENT' });
+    const freeAgent = baseUser({ id: 'agent-free', email: 'free@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([requester, restrictedAgent, freeAgent]);
+    const notificationRepository = new FakeNotificationRepository();
+    const agentCategoryRepository = new FakeAgentCategoryRepository(
+      new Map([['agent-restricted', ['category-a']]]),
+    );
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+      agentCategoryRepository,
+    );
+
+    // Chamado sem responsável, categoria B — fora da lista do agent restrito.
+    const ticket = baseTicket({ requesterId: 'requester-1', assigneeIds: [], categoryId: 'category-b' });
+    await service.notifyTicketUpdated(ticket, 'someone-else', ['priority']);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).toContain('agent-free');
+    expect(notifiedIds).not.toContain('agent-restricted');
+  });
+
+  it('chamado sem responsável e sem categoria definida não notifica um agent restrito', async () => {
+    const requester = baseUser({ id: 'requester-1', email: 'requester@example.com', role: 'CUSTOMER' });
+    const restrictedAgent = baseUser({ id: 'agent-restricted', email: 'restricted@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([requester, restrictedAgent]);
+    const notificationRepository = new FakeNotificationRepository();
+    const agentCategoryRepository = new FakeAgentCategoryRepository(
+      new Map([['agent-restricted', ['category-a']]]),
+    );
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+      agentCategoryRepository,
+    );
+
+    const ticket = baseTicket({ requesterId: 'requester-1', assigneeIds: [], categoryId: null });
+    await service.notifyTicketUpdated(ticket, 'someone-else', ['priority']);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).not.toContain('agent-restricted');
+  });
+});
+
+describe('TicketNotificationService.notifyTicketCreated — escopo dos destinatários', () => {
+  it('notifica admins e agents sem restrição, mas não um agent restrito a outra categoria', async () => {
+    const admin = baseUser({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' });
+    const freeAgent = baseUser({ id: 'agent-free', email: 'free@example.com', role: 'AGENT' });
+    const restrictedAgent = baseUser({ id: 'agent-restricted', email: 'restricted@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([admin, freeAgent, restrictedAgent]);
+    const notificationRepository = new FakeNotificationRepository();
+    const agentCategoryRepository = new FakeAgentCategoryRepository(
+      new Map([['agent-restricted', ['category-a']]]),
+    );
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+      agentCategoryRepository,
+    );
+
+    const ticket = baseTicket({ requesterId: 'requester-1', categoryId: 'category-b' });
+    await service.notifyTicketCreated(ticket);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).toContain('admin-1');
+    expect(notifiedIds).toContain('agent-free');
+    expect(notifiedIds).not.toContain('agent-restricted');
+  });
+
+  it('notifica um agent restrito quando o chamado novo é da categoria permitida a ele', async () => {
+    const restrictedAgent = baseUser({ id: 'agent-restricted', email: 'restricted@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([restrictedAgent]);
+    const notificationRepository = new FakeNotificationRepository();
+    const agentCategoryRepository = new FakeAgentCategoryRepository(
+      new Map([['agent-restricted', ['category-a']]]),
+    );
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+      agentCategoryRepository,
+    );
+
+    const ticket = baseTicket({ requesterId: 'requester-1', categoryId: 'category-a' });
+    await service.notifyTicketCreated(ticket);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).toContain('agent-restricted');
   });
 });

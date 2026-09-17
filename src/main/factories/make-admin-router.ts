@@ -10,6 +10,7 @@ import { ListUsersUseCase } from '../../application/use-cases/admin/users/list-u
 import { UpdateUserUseCase } from '../../application/use-cases/admin/users/update-user.use-case';
 import { BcryptPasswordHasher } from '../../infrastructure/auth/bcrypt-password-hasher';
 import { PrismaAuditLogger } from '../../infrastructure/database/audit/prisma-audit-logger';
+import { PrismaAgentCategoryRepository } from '../../infrastructure/database/repositories/prisma-agent-category-repository';
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaDashboardStatsRepository } from '../../infrastructure/database/repositories/prisma-dashboard-stats-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
@@ -22,12 +23,13 @@ export const makeAdminModule = (prisma: PrismaClient, authenticate: RequestHandl
   const userRepository = new PrismaUserRepository(prisma);
   const categoryRepository = new PrismaCategoryRepository(prisma);
   const dashboardStatsRepository = new PrismaDashboardStatsRepository(prisma);
+  const agentCategoryRepository = new PrismaAgentCategoryRepository(prisma);
   const passwordHasher = new BcryptPasswordHasher();
   const auditLogger = new PrismaAuditLogger(prisma);
 
-  const listUsersUseCase = new ListUsersUseCase(userRepository);
+  const listUsersUseCase = new ListUsersUseCase(userRepository, agentCategoryRepository);
   const createUserUseCase = new CreateUserUseCase(userRepository, passwordHasher, auditLogger);
-  const updateUserUseCase = new UpdateUserUseCase(userRepository, auditLogger);
+  const updateUserUseCase = new UpdateUserUseCase(userRepository, auditLogger, agentCategoryRepository);
   const deleteUserUseCase = new DeleteUserUseCase(userRepository, auditLogger);
 
   const listCategoriesUseCase = new ListCategoriesUseCase(categoryRepository);

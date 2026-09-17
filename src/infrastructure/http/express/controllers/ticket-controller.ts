@@ -13,6 +13,7 @@ import { UpdateTicketStatusUseCase } from '../../../../application/use-cases/tic
 import { Actor } from '../../../../application/dtos/ticket.dto';
 import { AppError } from '../../../../domain/errors/app-error';
 import { UnauthorizedError } from '../../../../domain/errors/auth-errors';
+import { AgentCategoryRepository } from '../../../../domain/repositories/agent-category-repository';
 
 export class TicketController {
   constructor(
@@ -27,13 +28,24 @@ export class TicketController {
     private readonly addAttachmentUseCase: AddAttachmentUseCase,
     private readonly updateAttachmentInternalUseCase: UpdateAttachmentInternalUseCase,
     private readonly downloadAttachmentUseCase: DownloadAttachmentUseCase,
+    private readonly agentCategoryRepository: AgentCategoryRepository,
   ) {}
 
-  private actor(req: Request): Actor {
+  // Async porque, pra AGENT, busca a restrição de categoria dele — feito uma
+  // vez aqui (não em cada use case) pra todo o resto do controller já
+  // receber o Actor pronto (ver ticket-access.ts).
+  private async actor(req: Request): Promise<Actor> {
     if (!req.user) {
       throw new UnauthorizedError();
     }
-    return { userId: req.user.userId, role: req.user.role };
+    const { userId, role } = req.user;
+
+    if (role !== 'AGENT') {
+      return { userId, role };
+    }
+
+    const categoryIds = await this.agentCategoryRepository.listCategoryIdsForUser(userId);
+    return { userId, role, allowedCategoryIds: categoryIds.length > 0 ? categoryIds : null };
   }
 
   private ticketId(req: Request): string {
@@ -53,7 +65,7 @@ export class TicketController {
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const ticket = await this.createTicketUseCase.execute(req.body, this.actor(req));
+      const ticket = await this.createTicketUseCase.execute(req.body, await this.actor(req));
       res.status(201).json(ticket);
     } catch (err) {
       next(err);
@@ -62,7 +74,7 @@ export class TicketController {
 
   get = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.getTicketUseCase.execute(this.ticketId(req), this.actor(req));
+      const result = await this.getTicketUseCase.execute(this.ticketId(req), await this.actor(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);
@@ -71,7 +83,7 @@ export class TicketController {
 
   list = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.listTicketsUseCase.execute(req.query, this.actor(req));
+      const result = await this.listTicketsUseCase.execute(req.query, await this.actor(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);
@@ -80,7 +92,7 @@ export class TicketController {
 
   updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const ticket = await this.updateTicketStatusUseCase.execute(this.ticketId(req), req.body, this.actor(req));
+      const ticket = await this.updateTicketStatusUseCase.execute(this.ticketId(req), req.body, await this.actor(req));
       res.status(200).json(ticket);
     } catch (err) {
       next(err);
@@ -89,7 +101,7 @@ export class TicketController {
 
   assign = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const ticket = await this.assignTicketUseCase.execute(this.ticketId(req), req.body, this.actor(req));
+      const ticket = await this.assignTicketUseCase.execute(this.ticketId(req), req.body, await this.actor(req));
       res.status(200).json(ticket);
     } catch (err) {
       next(err);
@@ -98,7 +110,7 @@ export class TicketController {
 
   bulkUpdate = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.bulkUpdateTicketsUseCase.execute(req.body, this.actor(req));
+      const result = await this.bulkUpdateTicketsUseCase.execute(req.body, await this.actor(req));
       res.status(200).json(result);
     } catch (err) {
       next(err);
@@ -107,7 +119,7 @@ export class TicketController {
 
   addComment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const comment = await this.addCommentUseCase.execute(this.ticketId(req), req.body, this.actor(req));
+      const comment = await this.addCommentUseCase.execute(this.ticketId(req), req.body, await this.actor(req));
       res.status(201).json(comment);
     } catch (err) {
       next(err);
@@ -120,7 +132,7 @@ export class TicketController {
         this.ticketId(req),
         this.commentId(req),
         req.body,
-        this.actor(req),
+        await this.actor(req),
       );
       res.status(200).json(comment);
     } catch (err) {
@@ -144,7 +156,7 @@ export class TicketController {
           // multipart/form-data só transmite strings; sem o campo, deixa o use case decidir o padrão.
           isInternal: req.body.isInternal === undefined ? undefined : req.body.isInternal === 'true',
         },
-        this.actor(req),
+        await this.actor(req),
       );
 
       res.status(201).json(attachment);
@@ -159,7 +171,7 @@ export class TicketController {
         this.ticketId(req),
         this.attachmentId(req),
         req.body,
-        this.actor(req),
+        await this.actor(req),
       );
       res.status(200).json(attachment);
     } catch (err) {
@@ -172,7 +184,7 @@ export class TicketController {
       const file = await this.downloadAttachmentUseCase.execute(
         this.ticketId(req),
         this.attachmentId(req),
-        this.actor(req),
+        await this.actor(req),
       );
 
       res.setHeader('Content-Type', file.mimeType);
