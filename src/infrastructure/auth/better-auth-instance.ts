@@ -130,6 +130,11 @@ export class BetterAuthProvider {
             google: {
               clientId: settings.googleClientId,
               clientSecret: decryptSecret(settings.googleClientSecretEncrypted),
+              // Sem isso, o better-auth só grava `name`/`image` do Google na
+              // CRIAÇÃO da conta — quem já tinha conta antes desse campo
+              // existir (ou trocou de foto no Google depois) nunca via a
+              // foto atualizar em logins seguintes.
+              overrideUserInfoOnSignIn: true,
             },
           }
         : undefined;
@@ -156,6 +161,10 @@ export class BetterAuthProvider {
               userInfoUrl: settings.customOAuthUserInfoUrl,
               scopes: settings.customOAuthScopes?.split(/[\s,]+/).filter(Boolean),
               getUserInfo: makeGetUserInfo(settings.customOAuthUserInfoUrl),
+              // Mesmo motivo do `overrideUserInfoOnSignIn` do Google acima —
+              // sem isso o plugin genérico só atualiza `name`/`image` na
+              // criação da conta.
+              overrideUserInfo: true,
             },
           ]
         : [];

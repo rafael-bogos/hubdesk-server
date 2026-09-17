@@ -169,3 +169,120 @@ describe('PATCH /users/me/notification-preferences', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('Foto de perfil', () => {
+  // PNG 1x1 válido — só precisa passar pelo fileFilter (mimetype) e ser
+  // gravável/legível de volta pelo FileStorage, o conteúdo em si não importa.
+  const tinyPng = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
+
+  it('upload substitui o avatarUrl em /auth/me e fica servido publicamente em GET /users/:id/avatar', async () => {
+    const user = await registerAndLogin();
+
+    const meBefore = await request(app).get('/auth/me').set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meBefore.body.avatarUrl).toBeNull();
+
+    const uploadResponse = await request(app)
+      .post('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .attach('file', tinyPng, { filename: 'avatar.png', contentType: 'image/png' });
+
+    expect(uploadResponse.status).toBe(200);
+    expect(uploadResponse.body.avatarUrl).toContain(`/users/${user.userId}/avatar`);
+
+    const meAfter = await request(app).get('/auth/me').set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meAfter.body.avatarUrl).toBe(uploadResponse.body.avatarUrl);
+
+    const publicResponse = await request(app).get(`/users/${user.userId}/avatar`);
+    expect(publicResponse.status).toBe(200);
+    expect(publicResponse.headers['content-type']).toBe('image/png');
+    expect(publicResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
+    expect(Buffer.compare(publicResponse.body, tinyPng)).toBe(0);
+  });
+
+  it('rejeita formato de imagem não suportado', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .post('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .attach('file', Buffer.from('<svg></svg>'), { filename: 'avatar.svg', contentType: 'image/svg+xml' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('DELETE remove o avatar próprio e volta a 404 em GET /users/:id/avatar', async () => {
+    const user = await registerAndLogin();
+
+    await request(app)
+      .post('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .attach('file', tinyPng, { filename: 'avatar.png', contentType: 'image/png' });
+
+    const deleteResponse = await request(app)
+      .delete('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`);
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body.avatarUrl).toBeNull();
+
+    const meAfter = await request(app).get('/auth/me').set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meAfter.body.avatarUrl).toBeNull();
+
+    const publicResponse = await request(app).get(`/users/${user.userId}/avatar`);
+    expect(publicResponse.status).toBe(404);
+  });
+
+  it('sem foto própria, cai pra foto já existente na conta do provedor OAuth (campo `image`)', async () => {
+    const user = await registerAndLogin();
+    const providerImageUrl = 'https://lh3.googleusercontent.com/a/fake-photo.jpg';
+    await prisma.user.update({ where: { id: user.userId }, data: { image: providerImageUrl } });
+
+    const meResponse = await request(app).get('/auth/me').set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meResponse.body.avatarUrl).toBe(providerImageUrl);
+  });
+
+  it('foto própria enviada tem prioridade sobre a foto do provedor OAuth', async () => {
+    const user = await registerAndLogin();
+    await prisma.user.update({
+      where: { id: user.userId },
+      data: { image: 'https://lh3.googleusercontent.com/a/fake-photo.jpg' },
+    });
+
+    const uploadResponse = await request(app)
+      .post('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .attach('file', tinyPng, { filename: 'avatar.png', contentType: 'image/png' });
+
+    expect(uploadResponse.body.avatarUrl).toContain(`/users/${user.userId}/avatar`);
+  });
+
+  it('remover a foto própria também limpa a foto do provedor OAuth (não volta a aparecer)', async () => {
+    const user = await registerAndLogin();
+    await prisma.user.update({
+      where: { id: user.userId },
+      data: { image: 'https://lh3.googleusercontent.com/a/fake-photo.jpg' },
+    });
+
+    await request(app)
+      .post('/users/me/avatar')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .attach('file', tinyPng, { filename: 'avatar.png', contentType: 'image/png' });
+
+    await request(app).delete('/users/me/avatar').set('Authorization', `Bearer ${user.accessToken}`);
+
+    const meAfter = await request(app).get('/auth/me').set('Authorization', `Bearer ${user.accessToken}`);
+    expect(meAfter.body.avatarUrl).toBeNull();
+  });
+
+  it('requisição sem token recebe 401 no upload e no delete', async () => {
+    const uploadResponse = await request(app)
+      .post('/users/me/avatar')
+      .attach('file', tinyPng, { filename: 'avatar.png', contentType: 'image/png' });
+    expect(uploadResponse.status).toBe(401);
+
+    const deleteResponse = await request(app).delete('/users/me/avatar');
+    expect(deleteResponse.status).toBe(401);
+  });
+});

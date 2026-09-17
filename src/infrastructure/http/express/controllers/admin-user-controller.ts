@@ -5,6 +5,7 @@ import { ListUsersUseCase } from '../../../../application/use-cases/admin/users/
 import { UpdateUserUseCase } from '../../../../application/use-cases/admin/users/update-user.use-case';
 import { User } from '../../../../domain/entities/user.entity';
 import { UnauthorizedError } from '../../../../domain/errors/auth-errors';
+import { buildAvatarUrl } from '../../../../application/use-cases/users/avatar-url';
 
 const toSafeOutput = (user: User, categoryIds: string[] = []) => ({
   id: user.id,
@@ -15,6 +16,7 @@ const toSafeOutput = (user: User, categoryIds: string[] = []) => ({
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
   categoryIds,
+  avatarUrl: buildAvatarUrl(user),
 });
 
 export class AdminUserController {

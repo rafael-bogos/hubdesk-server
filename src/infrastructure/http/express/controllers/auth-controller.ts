@@ -6,6 +6,7 @@ import { RefreshTokenUseCase } from '../../../../application/use-cases/auth/refr
 import { RegisterUserUseCase } from '../../../../application/use-cases/auth/register-user.use-case';
 import { UnauthorizedError } from '../../../../domain/errors/auth-errors';
 import { UserRepository } from '../../../../domain/repositories/user-repository';
+import { buildAvatarUrl } from '../../../../application/use-cases/users/avatar-url';
 
 export class AuthController {
   constructor(
@@ -85,6 +86,7 @@ export class AuthController {
         emailOnTicketUpdated: user.emailOnTicketUpdated,
         emailOnTicketClosed: user.emailOnTicketClosed,
         emailOnSlaWarning: user.emailOnSlaWarning,
+        avatarUrl: buildAvatarUrl(user),
       });
     } catch (err) {
       next(err);

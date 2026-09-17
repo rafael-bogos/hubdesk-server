@@ -13,6 +13,9 @@ const toDomain = (user: PrismaUser): User => ({
   emailOnTicketUpdated: user.emailOnTicketUpdated,
   emailOnTicketClosed: user.emailOnTicketClosed,
   emailOnSlaWarning: user.emailOnSlaWarning,
+  avatarPath: user.avatarPath,
+  avatarMimeType: user.avatarMimeType,
+  image: user.image,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -60,6 +63,9 @@ export class PrismaUserRepository implements UserRepository {
           ? { emailOnTicketClosed: data.emailOnTicketClosed }
           : {}),
         ...(data.emailOnSlaWarning !== undefined ? { emailOnSlaWarning: data.emailOnSlaWarning } : {}),
+        ...(data.avatarPath !== undefined ? { avatarPath: data.avatarPath } : {}),
+        ...(data.avatarMimeType !== undefined ? { avatarMimeType: data.avatarMimeType } : {}),
+        ...(data.image !== undefined ? { image: data.image } : {}),
       },
     });
 

@@ -3,11 +3,13 @@ import { Ticket } from '../../../domain/entities/ticket.entity';
 import { CategoryRepository } from '../../../domain/repositories/category-repository';
 import { UserRepository } from '../../../domain/repositories/user-repository';
 import { calculateSla, SlaState } from '../../services/sla-calculator';
+import { buildAvatarUrl } from '../users/avatar-url';
 
 export interface UserSummary {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
 }
 
 export interface CategorySummary {
@@ -31,8 +33,12 @@ export type EnrichedTicket = Ticket & {
   sla: TicketSlaSummary;
 };
 
-const toSummary = (user: { id: string; name: string; email: string } | undefined): UserSummary | null =>
-  user ? { id: user.id, name: user.name, email: user.email } : null;
+const toSummary = (
+  user:
+    | { id: string; name: string; email: string; avatarPath: string | null; image: string | null; updatedAt: Date }
+    | undefined,
+): UserSummary | null =>
+  user ? { id: user.id, name: user.name, email: user.email, avatarUrl: buildAvatarUrl(user) } : null;
 
 const toCategorySummary = (category: { id: string; name: string } | undefined): CategorySummary | null =>
   category ? { id: category.id, name: category.name } : null;
