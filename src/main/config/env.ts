@@ -26,4 +26,8 @@ export const env = {
   // verdade (ver infrastructure/email/make-email-sender.ts).
   resendApiKey: process.env.RESEND_API_KEY ?? '',
   emailFrom: process.env.EMAIL_FROM ?? 'Hubdesk <onboarding@resend.dev>',
+  // Logo usada no cabeçalho do e-mail transacional — URL pública (hoje um
+  // bucket R2 da Cloudflare). Vazio = e-mail sai sem logo (só o texto
+  // "Hubdesk"), em vez de referenciar uma URL quebrada.
+  emailLogoUrl: process.env.EMAIL_LOGO_URL ?? '',
 };

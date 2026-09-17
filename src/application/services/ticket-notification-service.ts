@@ -3,6 +3,8 @@ import { EmailSender } from '../../domain/ports/email-sender';
 import { RealtimeNotifier } from '../../domain/ports/realtime-notifier';
 import { CreateNotificationData, NotificationRepository } from '../../domain/repositories/notification-repository';
 import { UserRepository } from '../../domain/repositories/user-repository';
+import { env } from '../../main/config/env';
+import { renderTicketNotificationEmail } from './ticket-notification-email-template';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'Aberto',
@@ -115,6 +117,16 @@ export class TicketNotificationService {
     detail: string,
     isClosed: boolean,
   ): Promise<void> {
+    const html = renderTicketNotificationEmail({
+      ticketNumber: ticket.number,
+      ticketTitle: ticket.title,
+      detail,
+      isClosed,
+      ticketUrl: `${env.clientUrl}/tickets/${ticket.number}`,
+      settingsUrl: `${env.clientUrl}/settings`,
+      logoUrl: env.emailLogoUrl || undefined,
+    });
+
     await Promise.all(
       userIds.map(async (userId) => {
         const user = await this.userRepository.findById(userId);
@@ -126,7 +138,7 @@ export class TicketNotificationService {
         await this.emailSender.send({
           to: user.email,
           subject: isClosed ? `Chamado #${ticket.number} fechado` : `Chamado #${ticket.number} atualizado`,
-          html: `<p><strong>${ticket.title}</strong></p><p>${detail}</p>`,
+          html,
         });
       }),
     );
