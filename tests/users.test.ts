@@ -94,7 +94,11 @@ describe('PATCH /users/me/notification-preferences', () => {
       .send({ emailOnTicketUpdated: false });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ emailOnTicketUpdated: false, emailOnTicketClosed: true });
+    expect(response.body).toEqual({
+      emailOnTicketUpdated: false,
+      emailOnTicketClosed: true,
+      emailOnSlaWarning: true,
+    });
 
     const meResponse = await request(app)
       .get('/auth/me')
@@ -103,7 +107,7 @@ describe('PATCH /users/me/notification-preferences', () => {
     expect(meResponse.body.emailOnTicketClosed).toBe(true);
   });
 
-  it('atualiza só a preferência de fechamento, mantendo a de atualização', async () => {
+  it('atualiza só a preferência de fechamento, mantendo as demais', async () => {
     const user = await registerAndLogin();
 
     const response = await request(app)
@@ -112,7 +116,27 @@ describe('PATCH /users/me/notification-preferences', () => {
       .send({ emailOnTicketClosed: false });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ emailOnTicketUpdated: true, emailOnTicketClosed: false });
+    expect(response.body).toEqual({
+      emailOnTicketUpdated: true,
+      emailOnTicketClosed: false,
+      emailOnSlaWarning: true,
+    });
+  });
+
+  it('atualiza só a preferência de aviso de SLA, mantendo as demais', async () => {
+    const user = await registerAndLogin();
+
+    const response = await request(app)
+      .patch('/users/me/notification-preferences')
+      .set('Authorization', `Bearer ${user.accessToken}`)
+      .send({ emailOnSlaWarning: false });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      emailOnTicketUpdated: true,
+      emailOnTicketClosed: true,
+      emailOnSlaWarning: false,
+    });
   });
 
   it('rejeita payload inválido', async () => {

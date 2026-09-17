@@ -40,6 +40,7 @@ model User {
   // fecha, por exemplo.
   emailOnTicketUpdated Boolean @default(true) @map("email_on_ticket_updated")
   emailOnTicketClosed  Boolean @default(true) @map("email_on_ticket_closed")
+  emailOnSlaWarning    Boolean @default(true) @map("email_on_sla_warning")
 
   ticketsRequested   Ticket[]         @relation("TicketRequester")
   ticketAssignments  TicketAssignee[]
@@ -140,6 +141,23 @@ model LoginSettings {
   @@map("login_settings")
 }
 
+// Configuração única (uma linha, id fixo) do prazo de SLA por prioridade —
+// editada pelo admin em /admin/sla-settings. Ver application/services/sla-calculator.ts
+// pra como as horas viram um prazo de verdade por chamado.
+model SlaSettings {
+  id                      String   @id @default("singleton")
+  lowPriorityHours        Int      @default(72) @map("low_priority_hours")
+  mediumPriorityHours     Int      @default(24) @map("medium_priority_hours")
+  highPriorityHours       Int      @default(8) @map("high_priority_hours")
+  urgentPriorityHours     Int      @default(4) @map("urgent_priority_hours")
+  // % do prazo consumido a partir do qual um chamado é considerado "perto de
+  // estourar" (dispara indicador + notificação).
+  warningThresholdPercent Int      @default(80) @map("warning_threshold_percent")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("sla_settings")
+}
+
 enum TicketStatus {
   OPEN
   IN_PROGRESS
@@ -193,10 +211,22 @@ model Ticket {
   // roda (ou o status muda antes disso), volta a null.
   scheduledClosureAt DateTime? @map("scheduled_closure_at")
 
+  // SLA (ver application/services/sla-calculator.ts): o prazo em si não é
+  // armazenado (é sempre recalculado a partir de createdAt/priority/settings),
+  // só o que não dá pra derivar — o relógio pausado e o dedupe do aviso.
+  // Setado ao entrar em WAITING, null fora disso (ainda pausado agora).
+  slaPausedAt DateTime? @map("sla_paused_at")
+  // Soma de pausas já concluídas (ms) — não inclui a pausa em andamento.
+  slaPausedDurationMs Int @default(0) @map("sla_paused_duration_ms")
+  // Evita reenviar o aviso de "perto de estourar" a cada varredura do job.
+  // Resetado pra null quando a prioridade muda (novo alvo de SLA).
+  slaWarningNotifiedAt DateTime? @map("sla_warning_notified_at")
+
   comments      Comment[]
   attachments   Attachment[]
   notifications Notification[]
 
+  @@index([status])
   @@map("tickets")
 }
 

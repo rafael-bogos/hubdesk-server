@@ -6,17 +6,26 @@
 
 const NAVY = '#1F2A44';
 const TEAL = '#0E7C66';
+const AMBER = '#92400E';
 const CREAM = '#F4F3EF';
 const BORDER = '#E5E1D8';
 const MUTED = '#6B7280';
 const FOOTER_BG = '#FAF9F6';
 const FOOTER_TEXT = '#8A8578';
 
+export type TicketNotificationEmailKind = 'updated' | 'closed' | 'sla_warning';
+
+const KIND_PRESENTATION: Record<TicketNotificationEmailKind, { label: string; color: string; bg: string }> = {
+  updated: { label: 'Chamado atualizado', color: NAVY, bg: '#E8EAF0' },
+  closed: { label: 'Chamado fechado', color: TEAL, bg: '#E4F3EF' },
+  sla_warning: { label: 'SLA perto de estourar', color: AMBER, bg: '#FEF3C7' },
+};
+
 export interface TicketNotificationEmailData {
   ticketNumber: number;
   ticketTitle: string;
   detail: string;
-  isClosed: boolean;
+  kind: TicketNotificationEmailKind;
   ticketUrl: string;
   settingsUrl: string;
   // URL pública (ver env.emailLogoUrl) — vazia = cabeçalho sai só com o texto
@@ -42,14 +51,12 @@ export const renderTicketNotificationEmail = ({
   ticketNumber,
   ticketTitle,
   detail,
-  isClosed,
+  kind,
   ticketUrl,
   settingsUrl,
   logoUrl,
 }: TicketNotificationEmailData): string => {
-  const statusLabel = isClosed ? 'Chamado fechado' : 'Chamado atualizado';
-  const badgeColor = isClosed ? TEAL : NAVY;
-  const badgeBg = isClosed ? '#E4F3EF' : '#E8EAF0';
+  const { label: statusLabel, color: badgeColor, bg: badgeBg } = KIND_PRESENTATION[kind];
 
   const logoCell = logoUrl
     ? `<td style="width:30px; height:30px;">

@@ -24,6 +24,9 @@ const toDomain = (ticket: PrismaTicketWithAssignees): Ticket => ({
   updatedAt: ticket.updatedAt,
   closedAt: ticket.closedAt,
   scheduledClosureAt: ticket.scheduledClosureAt,
+  slaPausedAt: ticket.slaPausedAt,
+  slaPausedDurationMs: ticket.slaPausedDurationMs,
+  slaWarningNotifiedAt: ticket.slaWarningNotifiedAt,
 });
 
 const includeAssignees = { assignees: { select: { userId: true } } } as const;
@@ -125,11 +128,22 @@ export class PrismaTicketRepository implements TicketRepository {
         ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
         ...(data.closedAt !== undefined ? { closedAt: data.closedAt } : {}),
         ...(data.scheduledClosureAt !== undefined ? { scheduledClosureAt: data.scheduledClosureAt } : {}),
+        ...(data.slaPausedAt !== undefined ? { slaPausedAt: data.slaPausedAt } : {}),
+        ...(data.slaPausedDurationMs !== undefined ? { slaPausedDurationMs: data.slaPausedDurationMs } : {}),
+        ...(data.slaWarningNotifiedAt !== undefined ? { slaWarningNotifiedAt: data.slaWarningNotifiedAt } : {}),
       },
       include: includeAssignees,
     });
 
     return toDomain(ticket);
+  }
+
+  async findAllUnresolved(): Promise<Ticket[]> {
+    const tickets = await this.prisma.ticket.findMany({
+      where: { status: { not: 'RESOLVED' } },
+      include: includeAssignees,
+    });
+    return tickets.map(toDomain);
   }
 
   async setAssignees(id: string, userIds: string[]): Promise<Ticket> {

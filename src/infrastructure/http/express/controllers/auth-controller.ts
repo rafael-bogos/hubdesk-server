@@ -84,6 +84,7 @@ export class AuthController {
         role: user.role,
         emailOnTicketUpdated: user.emailOnTicketUpdated,
         emailOnTicketClosed: user.emailOnTicketClosed,
+        emailOnSlaWarning: user.emailOnSlaWarning,
       });
     } catch (err) {
       next(err);

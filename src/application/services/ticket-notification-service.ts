@@ -85,6 +85,55 @@ export class TicketNotificationService {
     await this.sendUpdateEmails([...recipientIds], ticket, detail, isClosed);
   }
 
+  // Chamado perto de estourar o SLA (ver sla-calculator.ts e o job de
+  // varredura que chama isto) — destinatários são responsável(is) + admins,
+  // sempre, mesmo sem ninguém atribuído ainda (diferente de
+  // `updateRecipientIds`, que é sobre visibilidade geral do chamado; aqui é
+  // escalonamento operacional, então admin sempre entra).
+  async notifySlaWarning(ticket: Ticket, dueAt: Date): Promise<void> {
+    const recipientIds = await this.slaRecipientIds(ticket);
+    if (recipientIds.length === 0) return;
+
+    const dueAtLabel = dueAt.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const detail = `Vence em ${dueAtLabel}`;
+
+    await this.dispatch(recipientIds, {
+      type: 'SLA_WARNING',
+      title: `Chamado #${ticket.number} perto de estourar o SLA`,
+      body: `${ticket.title} · ${detail}`,
+      ticketId: ticket.id,
+      ticketNumber: ticket.number,
+    });
+
+    const html = renderTicketNotificationEmail({
+      ticketNumber: ticket.number,
+      ticketTitle: ticket.title,
+      detail,
+      kind: 'sla_warning',
+      ticketUrl: `${env.clientUrl}/tickets/${ticket.number}`,
+      settingsUrl: `${env.clientUrl}/settings`,
+      logoUrl: env.emailLogoUrl || undefined,
+    });
+
+    await Promise.all(
+      recipientIds.map(async (userId) => {
+        const user = await this.userRepository.findById(userId);
+        if (!user || !user.emailOnSlaWarning) return;
+
+        await this.emailSender.send({
+          to: user.email,
+          subject: `Chamado #${ticket.number} perto de estourar o SLA`,
+          html,
+        });
+      }),
+    );
+  }
+
   // Mensagem nova (comentário/anexo) não vira notificação persistida — seria
   // barulho demais no sino a cada mensagem do chat. É só um empurrão em tempo
   // real pra quem já pode ver o chamado, pra atualizar a conversa se estiver
@@ -121,7 +170,7 @@ export class TicketNotificationService {
       ticketNumber: ticket.number,
       ticketTitle: ticket.title,
       detail,
-      isClosed,
+      kind: isClosed ? 'closed' : 'updated',
       ticketUrl: `${env.clientUrl}/tickets/${ticket.number}`,
       settingsUrl: `${env.clientUrl}/settings`,
       logoUrl: env.emailLogoUrl || undefined,
@@ -185,5 +234,19 @@ export class TicketNotificationService {
     }
 
     return ids;
+  }
+
+  private async slaRecipientIds(ticket: Ticket): Promise<string[]> {
+    const ids = new Set<string>(ticket.assigneeIds);
+
+    const { items: admins } = await this.userRepository.list({
+      role: 'ADMIN',
+      active: true,
+      page: 1,
+      pageSize: MAX_STAFF,
+    });
+    admins.forEach((admin) => ids.add(admin.id));
+
+    return [...ids];
   }
 }

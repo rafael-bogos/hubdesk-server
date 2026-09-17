@@ -28,6 +28,9 @@ const baseTicket = (overrides: Partial<Ticket> = {}): Ticket => ({
   updatedAt: new Date(),
   closedAt: null,
   scheduledClosureAt: null,
+  slaPausedAt: null,
+  slaPausedDurationMs: 0,
+  slaWarningNotifiedAt: null,
   ...overrides,
 });
 
@@ -41,6 +44,7 @@ const baseUser = (overrides: Partial<User> = {}): User => ({
   active: true,
   emailOnTicketUpdated: true,
   emailOnTicketClosed: true,
+  emailOnSlaWarning: true,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,

@@ -310,6 +310,20 @@ describe('GET /tickets/:id', () => {
       requester: { id: customer.userId },
     });
   });
+
+  it('inclui o cálculo de SLA do chamado (recém-criado, dentro do prazo)', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.number;
+
+    const response = await request(app)
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${customer.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.ticket.sla).toMatchObject({ state: 'ok', pausedAt: null });
+    expect(new Date(response.body.ticket.sla.dueAt).getTime()).toBeGreaterThan(Date.now());
+  });
 });
 
 describe('PATCH /tickets/:id/assign e /status', () => {
@@ -381,6 +395,30 @@ describe('PATCH /tickets/:id/assign e /status', () => {
       .send({ status: 'IN_PROGRESS' });
 
     expect(response.status).toBe(403);
+  });
+
+  it('WAITING pausa o SLA; sair de WAITING retoma e acumula a pausa', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketId = createResponse.body.number;
+
+    const waitingResponse = await request(app)
+      .patch(`/tickets/${ticketId}/status`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ status: 'WAITING' });
+
+    expect(waitingResponse.status).toBe(200);
+    expect(waitingResponse.body.slaPausedAt).not.toBeNull();
+
+    const resumedResponse = await request(app)
+      .patch(`/tickets/${ticketId}/status`)
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ status: 'IN_PROGRESS' });
+
+    expect(resumedResponse.status).toBe(200);
+    expect(resumedResponse.body.slaPausedAt).toBeNull();
+    expect(resumedResponse.body.slaPausedDurationMs).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -838,6 +876,30 @@ describe('PATCH /tickets/bulk', () => {
       expect(ticket.priority).toBe('URGENT');
       expect(ticket.assigneeIds).toEqual([agent.userId]);
     }
+  });
+
+  it('mudar a prioridade zera o dedupe do aviso de SLA (novo alvo, reavalia do zero)', async () => {
+    const customer = await registerAndLogin('CUSTOMER');
+    const agent = await registerAndLogin('AGENT');
+    const createResponse = await createTicket(customer.accessToken);
+    const ticketNumber = createResponse.body.number;
+
+    // Simula um chamado que já disparou o aviso de SLA anteriormente.
+    await prisma.ticket.update({
+      where: { id: createResponse.body.id },
+      data: { slaWarningNotifiedAt: new Date() },
+    });
+
+    const response = await request(app)
+      .patch('/tickets/bulk')
+      .set('Authorization', `Bearer ${agent.accessToken}`)
+      .send({ ticketNumbers: [ticketNumber], priority: 'LOW' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.updated).toHaveLength(1);
+
+    const updated = await prisma.ticket.findUnique({ where: { id: createResponse.body.id } });
+    expect(updated?.slaWarningNotifiedAt).toBeNull();
   });
 
   it('chamado inexistente vai para failed sem impedir os demais', async () => {

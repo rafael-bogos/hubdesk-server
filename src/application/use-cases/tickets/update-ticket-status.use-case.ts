@@ -4,7 +4,7 @@ import { TicketClosureScheduler } from '../../../domain/ports/ticket-closure-sch
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { TicketNotificationService } from '../../services/ticket-notification-service';
 import { Actor, UpdateTicketStatusInput } from '../../dtos/ticket.dto';
-import { buildStatusTransitionData, syncClosureSchedule } from './apply-status-transition';
+import { buildSlaPauseData, buildStatusTransitionData, syncClosureSchedule } from './apply-status-transition';
 import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export class UpdateTicketStatusUseCase {
@@ -23,7 +23,10 @@ export class UpdateTicketStatusUseCase {
 
     assertCanViewTicket(actor, ticket);
 
-    const data = buildStatusTransitionData(input.status, input.scheduledClosureAt);
+    const data = {
+      ...buildStatusTransitionData(input.status, input.scheduledClosureAt),
+      ...buildSlaPauseData(ticket.status, input.status, ticket.slaPausedAt, ticket.slaPausedDurationMs),
+    };
 
     // Agenda/cancela na fila ANTES de gravar no banco: se a fila falhar (ex:
     // Redis fora do ar), o chamado não fica com um status "PENDING_CLOSURE"

@@ -5,6 +5,7 @@ import { UserRepository } from '../../../domain/repositories/user-repository';
 export interface UpdateNotificationPreferencesInput {
   emailOnTicketUpdated?: boolean;
   emailOnTicketClosed?: boolean;
+  emailOnSlaWarning?: boolean;
 }
 
 export class UpdateNotificationPreferencesUseCase {
@@ -20,6 +21,7 @@ export class UpdateNotificationPreferencesUseCase {
     return this.userRepository.update(userId, {
       emailOnTicketUpdated: input.emailOnTicketUpdated,
       emailOnTicketClosed: input.emailOnTicketClosed,
+      emailOnSlaWarning: input.emailOnSlaWarning,
     });
   }
 }

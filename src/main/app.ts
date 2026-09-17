@@ -23,8 +23,10 @@ import { makeAuthModule } from './factories/make-auth-router';
 import { makeCategoryModule } from './factories/make-category-router';
 import { makeLoginSettingsModule } from './factories/make-login-settings-router';
 import { makeNotificationModule } from './factories/make-notification-router';
+import { makeSlaSettingsModule } from './factories/make-sla-settings-router';
 import { makeTicketModule } from './factories/make-ticket-router';
 import { makeUserModule } from './factories/make-user-router';
+import { PrismaSlaSettingsRepository } from '../infrastructure/database/repositories/prisma-sla-settings-repository';
 
 export const createApp = (
   options: { io?: AppSocketServer; ticketClosureScheduler?: TicketClosureScheduler } = {},
@@ -83,6 +85,10 @@ export const createApp = (
     betterAuthProvider,
   );
   app.use(loginSettingsRouter);
+
+  const slaSettingsRepository = new PrismaSlaSettingsRepository(prisma);
+  const { router: slaSettingsRouter } = makeSlaSettingsModule(authenticate, slaSettingsRepository);
+  app.use(slaSettingsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

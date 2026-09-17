@@ -6,10 +6,13 @@ import { logger } from '../infrastructure/logging/logger';
 import { JwtTokenService } from '../infrastructure/auth/jwt-token-service';
 import { prisma } from '../infrastructure/database/prisma/client';
 import { PrismaNotificationRepository } from '../infrastructure/database/repositories/prisma-notification-repository';
+import { PrismaSlaSettingsRepository } from '../infrastructure/database/repositories/prisma-sla-settings-repository';
 import { PrismaTicketRepository } from '../infrastructure/database/repositories/prisma-ticket-repository';
 import { PrismaUserRepository } from '../infrastructure/database/repositories/prisma-user-repository';
 import { BullmqTicketClosureScheduler } from '../infrastructure/queue/bullmq-ticket-closure-scheduler';
 import { createRedisConnection } from '../infrastructure/queue/redis-connection';
+import { SLA_SCAN_INTERVAL_MS, SLA_SCAN_JOB_ID, SLA_SCAN_QUEUE } from '../infrastructure/queue/sla-scan-queue';
+import { createSlaScanWorker } from '../infrastructure/queue/sla-scan-worker';
 import { TICKET_CLOSURE_QUEUE, TicketClosureJobData } from '../infrastructure/queue/ticket-closure-queue';
 import { createTicketClosureWorker } from '../infrastructure/queue/ticket-closure-worker';
 import { createSocketServer } from '../infrastructure/realtime/socket-server';
@@ -52,6 +55,28 @@ const ticketClosureWorker = createTicketClosureWorker(
   ),
 );
 
+// Varredura periódica de SLA: job repetível (nunca existiu um antes desta
+// feature — o de fechamento automático é single-shot com delay). BullMQ v6
+// usa "job schedulers" pra isso; `upsertJobScheduler` com o mesmo id é
+// idempotente entre reinícios do processo, então não duplica a varredura a
+// cada `npm run dev`/deploy.
+const slaScanQueue = new Queue(SLA_SCAN_QUEUE, { connection: createRedisConnection() });
+slaScanQueue
+  .upsertJobScheduler(SLA_SCAN_JOB_ID, { every: SLA_SCAN_INTERVAL_MS })
+  .catch((err) => logger.error({ err }, 'falha ao agendar a varredura periódica de SLA'));
+
+const slaScanWorker = createSlaScanWorker(
+  createRedisConnection(),
+  new PrismaTicketRepository(prisma),
+  new PrismaSlaSettingsRepository(prisma),
+  new TicketNotificationService(
+    new PrismaUserRepository(prisma),
+    new PrismaNotificationRepository(prisma),
+    new SocketIoRealtimeNotifier(io),
+    makeEmailSender(),
+  ),
+);
+
 const app = createApp({ io, ticketClosureScheduler });
 const httpServer = createServer(app);
 io.attach(httpServer);
@@ -64,6 +89,8 @@ const shutdown = async () => {
   logger.info('encerrando hubdesk-server...');
   await ticketClosureWorker.close();
   await closureQueue.close();
+  await slaScanWorker.close();
+  await slaScanQueue.close();
   httpServer.close(() => process.exit(0));
 };
 

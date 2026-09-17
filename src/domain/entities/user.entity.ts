@@ -10,6 +10,7 @@ export interface User {
   active: boolean;
   emailOnTicketUpdated: boolean;
   emailOnTicketClosed: boolean;
+  emailOnSlaWarning: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

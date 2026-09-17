@@ -4,7 +4,7 @@ import { TicketClosureScheduler } from '../../../domain/ports/ticket-closure-sch
 import { TicketRepository, UpdateTicketData } from '../../../domain/repositories/ticket-repository';
 import { TicketNotificationService } from '../../services/ticket-notification-service';
 import { Actor, BulkUpdateTicketsInput } from '../../dtos/ticket.dto';
-import { buildStatusTransitionData, syncClosureSchedule } from './apply-status-transition';
+import { buildSlaPauseData, buildStatusTransitionData, syncClosureSchedule } from './apply-status-transition';
 import { assertCanViewTicket, resolveTicketByNumber } from './ticket-access';
 
 export interface BulkUpdateTicketsFailure {
@@ -50,11 +50,18 @@ export class BulkUpdateTicketsUseCase {
 
         if (statusChanging) {
           Object.assign(data, buildStatusTransitionData(input.status!, input.scheduledClosureAt));
+          Object.assign(
+            data,
+            buildSlaPauseData(ticket.status, input.status!, ticket.slaPausedAt, ticket.slaPausedDurationMs),
+          );
           changeTypes.push('status');
         }
 
         if (input.priority !== undefined && input.priority !== ticket.priority) {
           data.priority = input.priority;
+          // Prioridade nova = alvo de SLA novo — reavalia o aviso do zero em
+          // vez de deixar o dedupe da prioridade anterior impedir um novo aviso.
+          data.slaWarningNotifiedAt = null;
           changeTypes.push('priority');
         }
 

@@ -14,6 +14,9 @@ export interface UpdateTicketData {
   categoryId?: string | null;
   closedAt?: Date | null;
   scheduledClosureAt?: Date | null;
+  slaPausedAt?: Date | null;
+  slaPausedDurationMs?: number;
+  slaWarningNotifiedAt?: Date | null;
 }
 
 export interface ListTicketsFilters {
@@ -53,4 +56,7 @@ export interface TicketRepository {
   list(filters: ListTicketsFilters): Promise<ListTicketsResult>;
   update(id: string, data: UpdateTicketData): Promise<Ticket>;
   setAssignees(id: string, userIds: string[]): Promise<Ticket>;
+  // Usado só pelo job de varredura de SLA — todo chamado ainda não resolvido,
+  // sem paginação (aceito como limitação conhecida pro volume atual).
+  findAllUnresolved(): Promise<Ticket[]>;
 }

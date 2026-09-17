@@ -12,6 +12,7 @@ const toDomain = (user: PrismaUser): User => ({
   active: user.active,
   emailOnTicketUpdated: user.emailOnTicketUpdated,
   emailOnTicketClosed: user.emailOnTicketClosed,
+  emailOnSlaWarning: user.emailOnSlaWarning,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -58,6 +59,7 @@ export class PrismaUserRepository implements UserRepository {
         ...(data.emailOnTicketClosed !== undefined
           ? { emailOnTicketClosed: data.emailOnTicketClosed }
           : {}),
+        ...(data.emailOnSlaWarning !== undefined ? { emailOnSlaWarning: data.emailOnSlaWarning } : {}),
       },
     });
 

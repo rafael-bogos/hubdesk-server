@@ -33,6 +33,7 @@ export class UserController {
       res.status(200).json({
         emailOnTicketUpdated: user.emailOnTicketUpdated,
         emailOnTicketClosed: user.emailOnTicketClosed,
+        emailOnSlaWarning: user.emailOnSlaWarning,
       });
     } catch (err) {
       next(err);

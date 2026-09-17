@@ -19,6 +19,7 @@ import { PrismaAttachmentRepository } from '../../infrastructure/database/reposi
 import { PrismaCategoryRepository } from '../../infrastructure/database/repositories/prisma-category-repository';
 import { PrismaCommentRepository } from '../../infrastructure/database/repositories/prisma-comment-repository';
 import { PrismaNotificationRepository } from '../../infrastructure/database/repositories/prisma-notification-repository';
+import { PrismaSlaSettingsRepository } from '../../infrastructure/database/repositories/prisma-sla-settings-repository';
 import { PrismaTicketRepository } from '../../infrastructure/database/repositories/prisma-ticket-repository';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/prisma-user-repository';
 import { makeEmailSender } from '../../infrastructure/email/make-email-sender';
@@ -41,6 +42,7 @@ export const makeTicketModule = (
   const userRepository = new PrismaUserRepository(prisma);
   const categoryRepository = new PrismaCategoryRepository(prisma);
   const notificationRepository = new PrismaNotificationRepository(prisma);
+  const slaSettingsRepository = new PrismaSlaSettingsRepository(prisma);
   const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
 
   const ticketNotificationService = new TicketNotificationService(
@@ -57,8 +59,14 @@ export const makeTicketModule = (
     attachmentRepository,
     userRepository,
     categoryRepository,
+    slaSettingsRepository,
   );
-  const listTicketsUseCase = new ListTicketsUseCase(ticketRepository, userRepository, categoryRepository);
+  const listTicketsUseCase = new ListTicketsUseCase(
+    ticketRepository,
+    userRepository,
+    categoryRepository,
+    slaSettingsRepository,
+  );
   const updateTicketStatusUseCase = new UpdateTicketStatusUseCase(
     ticketRepository,
     ticketNotificationService,

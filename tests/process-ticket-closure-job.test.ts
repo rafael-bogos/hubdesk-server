@@ -29,6 +29,9 @@ const baseTicket = (overrides: Partial<Ticket> = {}): Ticket => ({
   updatedAt: new Date(),
   closedAt: null,
   scheduledClosureAt: new Date(),
+  slaPausedAt: null,
+  slaPausedDurationMs: 0,
+  slaWarningNotifiedAt: null,
   ...overrides,
 });
 
@@ -57,6 +60,10 @@ class FakeTicketRepository implements TicketRepository {
     this.updateCalls.push({ id, data });
     this.ticket = { ...(this.ticket as Ticket), ...data };
     return this.ticket;
+  }
+
+  async findAllUnresolved(): Promise<Ticket[]> {
+    throw new Error('not implemented');
   }
 
   async setAssignees(): Promise<Ticket> {

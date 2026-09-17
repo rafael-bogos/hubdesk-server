@@ -26,6 +26,30 @@ export const buildStatusTransitionData = (
   };
 };
 
+// Parte pura: calcula os campos de pausa do SLA numa troca de status —
+// pausa ao entrar em WAITING, retoma (acumulando a pausa) ao sair. Mesma
+// composição de `buildStatusTransitionData` (chamada ao lado dela nos dois
+// use cases, mesclando no mesmo `UpdateTicketData`).
+export const buildSlaPauseData = (
+  previousStatus: TicketStatus,
+  nextStatus: TicketStatus,
+  slaPausedAt: Date | null,
+  slaPausedDurationMs: number,
+): Partial<UpdateTicketData> => {
+  if (previousStatus !== 'WAITING' && nextStatus === 'WAITING') {
+    return { slaPausedAt: new Date() };
+  }
+
+  if (previousStatus === 'WAITING' && nextStatus !== 'WAITING' && slaPausedAt) {
+    return {
+      slaPausedAt: null,
+      slaPausedDurationMs: slaPausedDurationMs + (Date.now() - slaPausedAt.getTime()),
+    };
+  }
+
+  return {};
+};
+
 // Parte com efeito colateral (fila): chama DEPOIS que a escrita no banco deu
 // certo, pra nunca agendar/cancelar um job pra uma mudança que não foi
 // persistida.

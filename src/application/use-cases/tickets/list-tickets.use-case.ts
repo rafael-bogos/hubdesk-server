@@ -1,4 +1,5 @@
 import { CategoryRepository } from '../../../domain/repositories/category-repository';
+import { SlaSettingsRepository } from '../../../domain/repositories/sla-settings-repository';
 import { TicketRepository } from '../../../domain/repositories/ticket-repository';
 import { UserRepository } from '../../../domain/repositories/user-repository';
 import { Actor, ListTicketsInput } from '../../dtos/ticket.dto';
@@ -20,6 +21,7 @@ export class ListTicketsUseCase {
     private readonly ticketRepository: TicketRepository,
     private readonly userRepository: UserRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly slaSettingsRepository: SlaSettingsRepository,
   ) {}
 
   async execute(input: ListTicketsInput, actor: Actor): Promise<ListTicketsOutput> {
@@ -43,7 +45,8 @@ export class ListTicketsUseCase {
       pageSize,
     });
 
-    const items = await enrichTickets(result.items, this.userRepository, this.categoryRepository);
+    const slaSettings = await this.slaSettingsRepository.get();
+    const items = await enrichTickets(result.items, this.userRepository, this.categoryRepository, slaSettings);
 
     return { ...result, items };
   }

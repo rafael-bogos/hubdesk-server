@@ -7,7 +7,7 @@ describe('renderTicketNotificationEmail', () => {
       ticketNumber: 7,
       ticketTitle: '<img src=x onerror=alert(1)>',
       detail: 'Novo status: Fechado',
-      isClosed: true,
+      kind: 'closed',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
     });
@@ -16,12 +16,12 @@ describe('renderTicketNotificationEmail', () => {
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
-  it('usa o rótulo e a cor de "fechado" quando isClosed é true', () => {
+  it('usa o rótulo e a cor de "fechado" quando kind é closed', () => {
     const html = renderTicketNotificationEmail({
       ticketNumber: 7,
       ticketTitle: 'Impressora não liga',
       detail: 'Novo status: Fechado',
-      isClosed: true,
+      kind: 'closed',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
     });
@@ -30,12 +30,12 @@ describe('renderTicketNotificationEmail', () => {
     expect(html).not.toContain('Chamado atualizado');
   });
 
-  it('usa o rótulo de "atualizado" quando isClosed é false', () => {
+  it('usa o rótulo de "atualizado" quando kind é updated', () => {
     const html = renderTicketNotificationEmail({
       ticketNumber: 7,
       ticketTitle: 'Impressora não liga',
       detail: 'Novo status: Em andamento',
-      isClosed: false,
+      kind: 'updated',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
     });
@@ -49,7 +49,7 @@ describe('renderTicketNotificationEmail', () => {
       ticketNumber: 7,
       ticketTitle: 'Impressora não liga',
       detail: 'Novo status: Fechado',
-      isClosed: true,
+      kind: 'closed',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
     });
@@ -63,7 +63,7 @@ describe('renderTicketNotificationEmail', () => {
       ticketNumber: 7,
       ticketTitle: 'Impressora não liga',
       detail: 'Novo status: Fechado',
-      isClosed: true,
+      kind: 'closed',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
       logoUrl: 'https://pub-example.r2.dev/logo.svg',
@@ -77,12 +77,27 @@ describe('renderTicketNotificationEmail', () => {
       ticketNumber: 7,
       ticketTitle: 'Impressora não liga',
       detail: 'Novo status: Fechado',
-      isClosed: true,
+      kind: 'closed',
       ticketUrl: 'https://hubdesk.example.com/tickets/7',
       settingsUrl: 'https://hubdesk.example.com/settings',
     });
 
     expect(html).not.toContain('<img');
     expect(html).toContain('Hubdesk');
+  });
+
+  it('usa o rótulo e a cor de "perto de estourar" quando kind é sla_warning', () => {
+    const html = renderTicketNotificationEmail({
+      ticketNumber: 7,
+      ticketTitle: 'Impressora não liga',
+      detail: 'Vence em 17/09 14:00',
+      kind: 'sla_warning',
+      ticketUrl: 'https://hubdesk.example.com/tickets/7',
+      settingsUrl: 'https://hubdesk.example.com/settings',
+    });
+
+    expect(html).toContain('SLA perto de estourar');
+    expect(html).not.toContain('Chamado fechado');
+    expect(html).not.toContain('Chamado atualizado');
   });
 });
