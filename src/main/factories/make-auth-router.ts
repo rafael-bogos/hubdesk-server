@@ -24,9 +24,8 @@ import { makeAuthenticate } from '../../infrastructure/http/express/middleware/a
 import { makeAuthRouter } from '../../infrastructure/http/express/routes/auth-routes';
 import { makeOAuthRouter } from '../../infrastructure/http/express/routes/oauth-routes';
 import { createRedisConnection } from '../../infrastructure/queue/redis-connection';
-import { LocalFileStorage } from '../../infrastructure/storage/local-file-storage';
+import { makeFileStorage } from '../../infrastructure/storage/make-file-storage';
 import { env } from '../config/env';
-import { resolve } from 'node:path';
 
 export const makeAuthModule = (prisma: PrismaClient, betterAuthProvider: BetterAuthProvider) => {
   const userRepository = new PrismaUserRepository(prisma);
@@ -67,7 +66,7 @@ export const makeAuthModule = (prisma: PrismaClient, betterAuthProvider: BetterA
   // essas rotas são a ponte que devolve pro Next.js o mesmo formato de
   // {accessToken, refreshToken, user} que /auth/login já devolve.
   const loginSettingsRepository = new PrismaLoginSettingsRepository(prisma);
-  const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
+  const fileStorage = makeFileStorage();
   const oauthRedis = createRedisConnection();
   const getLoginMethodsUseCase = new GetLoginMethodsUseCase(loginSettingsRepository);
   const startOAuthUseCase = new StartOAuthUseCase(betterAuthProvider);

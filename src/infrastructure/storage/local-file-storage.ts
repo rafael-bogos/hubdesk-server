@@ -24,8 +24,4 @@ export class LocalFileStorage implements FileStorage {
   async delete(path: string): Promise<void> {
     await unlink(resolve(this.uploadsDir, path));
   }
-
-  getUrl(path: string): string {
-    return `/uploads/${path}`;
-  }
 }

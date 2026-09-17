@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { resolve } from 'node:path';
 import { RequestHandler } from 'express';
 import { AddAttachmentUseCase } from '../../application/use-cases/tickets/add-attachment.use-case';
 import { AddCommentUseCase } from '../../application/use-cases/tickets/add-comment.use-case';
@@ -27,8 +26,7 @@ import { TicketController } from '../../infrastructure/http/express/controllers/
 import { makeTicketRouter } from '../../infrastructure/http/express/routes/ticket-routes';
 import { NullRealtimeNotifier } from '../../infrastructure/realtime/null-realtime-notifier';
 import { NullTicketClosureScheduler } from '../../infrastructure/queue/null-ticket-closure-scheduler';
-import { LocalFileStorage } from '../../infrastructure/storage/local-file-storage';
-import { env } from '../config/env';
+import { makeFileStorage } from '../../infrastructure/storage/make-file-storage';
 
 export const makeTicketModule = (
   prisma: PrismaClient,
@@ -43,7 +41,7 @@ export const makeTicketModule = (
   const categoryRepository = new PrismaCategoryRepository(prisma);
   const notificationRepository = new PrismaNotificationRepository(prisma);
   const slaSettingsRepository = new PrismaSlaSettingsRepository(prisma);
-  const fileStorage = new LocalFileStorage(resolve(process.cwd(), env.uploadsDir));
+  const fileStorage = makeFileStorage();
 
   const ticketNotificationService = new TicketNotificationService(
     userRepository,

@@ -13,5 +13,4 @@ export interface FileStorage {
   save(file: FileToSave): Promise<SavedFile>;
   read(path: string): Promise<Buffer>;
   delete(path: string): Promise<void>;
-  getUrl(path: string): string;
 }

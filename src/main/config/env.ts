@@ -30,4 +30,12 @@ export const env = {
   // bucket R2 da Cloudflare). Vazio = e-mail sai sem logo (só o texto
   // "Hubdesk"), em vez de referenciar uma URL quebrada.
   emailLogoUrl: process.env.EMAIL_LOGO_URL ?? '',
+  // Armazenamento de arquivo (anexos de chamado, logo do OAuth customizado)
+  // via R2 da Cloudflare (compatível com S3, ver infrastructure/storage).
+  // Faltando qualquer uma dessas 4 variáveis, cai pro disco local
+  // (LocalFileStorage) — ver infrastructure/storage/make-file-storage.ts.
+  r2AccountId: process.env.R2_ACCOUNT_ID ?? '',
+  r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
+  r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
+  r2BucketName: process.env.R2_BUCKET_NAME ?? '',
 };
