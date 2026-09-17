@@ -57,7 +57,7 @@ export class TicketNotificationService {
   // status + prioridade juntos): uma única notificação combinada, em vez de
   // uma por campo alterado.
   async notifyTicketUpdated(ticket: Ticket, actorId: string, changeTypes: TicketChangeType[]): Promise<void> {
-    const recipientIds = await this.updateRecipientIds(ticket, changeTypes);
+    const recipientIds = await this.updateRecipientIds(ticket);
     recipientIds.delete(actorId); // quem fez a mudança já vê o resultado na própria tela
 
     const detail = changeTypes
@@ -91,7 +91,7 @@ export class TicketNotificationService {
   // aberta na tela. Nota interna nunca vai pro solicitante (ele não pode nem
   // ver a mensagem).
   async notifyTicketMessage(ticket: Ticket, authorId: string, isInternal: boolean): Promise<void> {
-    const recipientIds = await this.updateRecipientIds(ticket, ['status']);
+    const recipientIds = await this.updateRecipientIds(ticket);
     recipientIds.delete(authorId);
     if (isInternal) {
       recipientIds.delete(ticket.requesterId);
@@ -154,7 +154,14 @@ export class TicketNotificationService {
     return items.map((user) => user.id);
   }
 
-  private async updateRecipientIds(ticket: Ticket, changeTypes: TicketChangeType[]): Promise<Set<string>> {
+  // Quem deve saber que esse chamado mudou = quem consegue vê-lo, pelas
+  // mesmas regras de ticket-access.ts (canViewTicket): solicitante, admins e
+  // — só enquanto sem responsável, quando qualquer agent pode se atribuir a
+  // qualquer momento — todo agent; depois de atribuído, só quem está
+  // atribuído. Depende exclusivamente do estado atual de `assigneeIds`, nunca
+  // do tipo de mudança — do contrário, atribuir um chamado a alguém notifica
+  // agents sem nenhuma relação com ele (e que, atribuído, nem enxergam mais).
+  private async updateRecipientIds(ticket: Ticket): Promise<Set<string>> {
     const ids = new Set<string>([ticket.requesterId]);
 
     const { items: admins } = await this.userRepository.list({
@@ -165,11 +172,7 @@ export class TicketNotificationService {
     });
     admins.forEach((admin) => ids.add(admin.id));
 
-    // Atribuição muda QUEM enxerga o chamado (mesma regra de canViewTicket):
-    // um agent que via esse chamado por estar sem responsável precisa saber
-    // que ele saiu da fila dele, mesmo não sendo o novo responsável — por
-    // isso todo agent entra aqui, e não só quem ficou atribuído.
-    if (changeTypes.includes('assignment') || ticket.assigneeIds.length === 0) {
+    if (ticket.assigneeIds.length === 0) {
       const { items: agents } = await this.userRepository.list({
         role: 'AGENT',
         active: true,
@@ -177,9 +180,7 @@ export class TicketNotificationService {
         pageSize: MAX_STAFF,
       });
       agents.forEach((agent) => ids.add(agent.id));
-    }
-
-    if (changeTypes.includes('status') || changeTypes.includes('priority')) {
+    } else {
       ticket.assigneeIds.forEach((id) => ids.add(id));
     }
 

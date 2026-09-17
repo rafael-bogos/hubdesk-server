@@ -317,11 +317,11 @@ describe('Socket.io — notificação de chamado atualizado', () => {
     socket.disconnect();
   });
 
-  it('agent não envolvido recebe "notification:new" quando o chamado (antes sem responsável) é atribuído a um admin', async () => {
-    // Regressão: um chamado sem responsável some da fila de todo agent quando
-    // é atribuído — mesmo que o novo responsável seja um admin (que não
-    // participava da fila de agent nenhum). Todo agent precisa saber que ele
-    // saiu da própria fila, não só quem ficou responsável.
+  it('agent não envolvido não recebe "notification:new" quando o chamado (antes sem responsável) é atribuído a outra pessoa', async () => {
+    // Depois de atribuído, o chamado só é visível a quem está na lista de
+    // responsáveis (mesma regra de canViewTicket) — um agent sem nenhuma
+    // relação com ele não deve ser notificado só por ter enxergado o chamado
+    // antes dele ser atribuído.
     const customer = await registerAndLogin('CUSTOMER');
     const agent = await registerAndLogin('AGENT');
     const admin = await registerAndLogin('ADMIN');
@@ -330,8 +330,9 @@ describe('Socket.io — notificação de chamado atualizado', () => {
     const ticketNumber = createResponse.body.number;
 
     const socket = await connect(agent.accessToken);
-    const eventPromise = new Promise<Record<string, unknown>>((resolve) => {
-      socket.once('notification:new', resolve);
+    let received = false;
+    socket.once('notification:new', () => {
+      received = true;
     });
 
     await request(app)
@@ -339,8 +340,8 @@ describe('Socket.io — notificação de chamado atualizado', () => {
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({ assigneeIds: [admin.userId] });
 
-    const event = await eventPromise;
-    expect(event).toMatchObject({ userId: agent.userId, type: 'TICKET_UPDATED', ticketNumber });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(received).toBe(false);
 
     socket.disconnect();
   });

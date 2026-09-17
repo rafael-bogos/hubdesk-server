@@ -219,3 +219,48 @@ describe('TicketNotificationService.notifyTicketUpdated — e-mail', () => {
     expect(emailSender.sent).toHaveLength(0);
   });
 });
+
+describe('TicketNotificationService.notifyTicketUpdated — escopo dos destinatários', () => {
+  it('atribuir o chamado a um agent não notifica outros agents sem nenhuma relação com ele', async () => {
+    const requester = baseUser({ id: 'requester-1', email: 'requester@example.com', role: 'CUSTOMER' });
+    const assignee = baseUser({ id: 'agent-assigned', email: 'assigned@example.com', role: 'AGENT' });
+    const bystander = baseUser({ id: 'agent-bystander', email: 'bystander@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([requester, assignee, bystander]);
+    const notificationRepository = new FakeNotificationRepository();
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+    );
+
+    // Ticket já vem com o novo responsável (a atribuição já foi persistida
+    // antes do serviço de notificação ser chamado, igual ao use case real).
+    const ticket = baseTicket({ requesterId: 'requester-1', assigneeIds: ['agent-assigned'] });
+    await service.notifyTicketUpdated(ticket, 'someone-else', ['assignment']);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).toContain('agent-assigned');
+    expect(notifiedIds).not.toContain('agent-bystander');
+  });
+
+  it('chamado ainda sem responsável notifica todo agent (qualquer um pode se atribuir)', async () => {
+    const requester = baseUser({ id: 'requester-1', email: 'requester@example.com', role: 'CUSTOMER' });
+    const agentA = baseUser({ id: 'agent-a', email: 'a@example.com', role: 'AGENT' });
+    const agentB = baseUser({ id: 'agent-b', email: 'b@example.com', role: 'AGENT' });
+    const userRepository = new FakeUserRepository([requester, agentA, agentB]);
+    const notificationRepository = new FakeNotificationRepository();
+    const service = new TicketNotificationService(
+      userRepository,
+      notificationRepository,
+      new FakeRealtimeNotifier(),
+      new FakeEmailSender(),
+    );
+
+    const ticket = baseTicket({ requesterId: 'requester-1', assigneeIds: [], priority: 'HIGH' });
+    await service.notifyTicketUpdated(ticket, 'someone-else', ['priority']);
+
+    const notifiedIds = notificationRepository.created.map((n) => n.userId);
+    expect(notifiedIds).toEqual(expect.arrayContaining(['agent-a', 'agent-b']));
+  });
+});
